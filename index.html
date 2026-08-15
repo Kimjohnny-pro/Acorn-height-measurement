@@ -1,164 +1,191 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>AR 좌표 기반 높이 측정기</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #000;
-            color: #fff;
+import UIKit
+import CoreMotion
+
+class HeightMeasurementViewController: UIViewController {
+    
+    // UI Components
+    @IBOutlet weak var unitSegmentControl: UISegmentedControl!
+    @IBOutlet weak var startButton: UIButton!
+    @IBOutlet weak var resultLabel: UILabel!
+    @IBOutlet weak var statusLabel: UILabel!
+    
+    // 센서 및 측정 관련 변수
+    let motionManager = CMMotionManager()
+    var startY: CGFloat = 0
+    var endY: CGFloat = 0
+    var startAttitude: CMAttitude?
+    var endAttitude: CMAttitude?
+    var isMeasuring = false
+    
+    // 캘리브레이션 변수
+    var calibrationFactor: Double = 1.0 // 픽셀 to cm 변환 계수
+    var isCalibrated = false
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        setupMotionManager()
+        setupUI()
+        showCalibrationAlert()
+    }
+    
+    // MARK: - Motion Manager Setup
+    func setupMotionManager() {
+        guard motionManager.isDeviceMotionAvailable else {
+            statusLabel.text = "기기가 모션 센서를 지원하지 않습니다"
+            return
         }
-        #ui-container {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 400px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            backdrop-filter: blur(10px);
-            z-index: 10;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        
+        motionManager.deviceMotionUpdateInterval = 0.01 // 100Hz
+        motionManager.startDeviceMotionUpdates()
+    }
+    
+    // MARK: - UI Setup
+    func setupUI() {
+        startButton.setTitle("측정 시작", for: .normal)
+        startButton.addTarget(self, action: #selector(toggleMeasurement), for: .touchUpInside)
+        
+        unitSegmentControl.setSegmentAction(for: .valueChanged) { [weak self] in
+            self?.updateResultDisplay()
         }
-        h2 { margin: 0 0 10px 0; font-size: 18px; color: #a0aec0; }
-        .metric {
-            font-size: 42px;
-            font-weight: bold;
-            color: #48bb78;
-            margin: 10px 0;
+        
+        resultLabel.text = "준비됨"
+        statusLabel.text = "먼저 캘리브레이션을 진행하세요"
+    }
+    
+    // MARK: - Calibration
+    func showCalibrationAlert() {
+        let alert = UIAlertController(title: "캘리브레이션", message: "핸드폰을 정확히 수직으로 놓고 '10cm 올리기'를 선택한 후, 핸드폰을 정확히 10cm 올렸을 때 '완료'를 누르세요.", preferredStyle: .alert)
+        
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+        alert.addAction(UIAlertAction(title: "시작", style: .default) { [weak self] _ in
+            self?.startCalibration()
+        })
+        
+        present(alert, animated: true)
+    }
+    
+    func startCalibration() {
+        isMeasuring = true
+        startY = 0
+        startAttitude = motionManager.deviceMotion?.attitude.copy() as? CMAttitude
+        statusLabel.text = "10cm 올리고 있습니다... (기다리세요)"
+        startButton.isEnabled = false
+    }
+    
+    @objc func completeCalibration() {
+        guard let currentMotion = motionManager.deviceMotion else { return }
+        
+        endY = 100 // 10cm = 100mm (실제로 핸드폰을 10cm 올렸다고 가정)
+        endAttitude = currentMotion.attitude.copy() as? CMAttitude
+        
+        calculateCalibrationFactor()
+    }
+    
+    func calculateCalibrationFactor() {
+        guard let startAtt = startAttitude, let endAtt = endAttitude else { return }
+        
+        let yawDifference = endAtt.yaw - startAtt.yaw
+        let pitchDifference = endAtt.pitch - startAtt.pitch
+        let rollDifference = endAtt.roll - startAtt.roll
+        
+        // Y축 변화량에 영향을 주는 각도 변화 (pitch와 roll)
+        let angleCorrection = sqrt(pitchDifference * pitchDifference + rollDifference * rollDifference)
+        
+        // 캘리브레이션: 10cm 올렸을 때의 Y좌표 변화량으로부터 계수 계산
+        calibrationFactor = 100.0 / max(abs(endY - startY), 1.0) // 10cm를 픽셀 변화로 정규화
+        
+        // 각도 보정 적용
+        calibrationFactor *= (1.0 + angleCorrection)
+        
+        isCalibrated = true
+        isMeasuring = false
+        startButton.isEnabled = true
+        statusLabel.text = "캘리브레이션 완료! 이제 측정을 시작할 수 있습니다."
+        
+        let alert = UIAlertController(title: "캘리브레이션 완료", message: "캘리브레이션이 완료되었습니다. 이제 높이를 측정할 수 있습니다.", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "확인", style: .default))
+        present(alert, animated: true)
+    }
+    
+    // MARK: - Height Measurement
+    @objc func toggleMeasurement() {
+        guard isCalibrated else {
+            statusLabel.text = "먼저 캘리브레이션을 완료하세요"
+            return
         }
-        .info {
-            font-size: 13px;
-            color: #cbd5e0;
-            margin-bottom: 15px;
+        
+        if !isMeasuring {
+            startMeasurement()
+        } else {
+            endMeasurement()
         }
-        button {
-            background-color: #3182ce;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            font-size: 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            font-weight: bold;
+    }
+    
+    func startMeasurement() {
+        isMeasuring = true
+        startY = 0 // 터치 위치의 Y좌표
+        startAttitude = motionManager.deviceMotion?.attitude.copy() as? CMAttitude
+        
+        startButton.setTitle("측정 완료", for: .normal)
+        statusLabel.text = "높이를 측정 중입니다... (측정 완료 버튼을 누르세요)"
+        resultLabel.text = "측정 중..."
+    }
+    
+    func endMeasurement() {
+        guard let currentMotion = motionManager.deviceMotion else { return }
+        
+        isMeasuring = false
+        endY = 0 // 터치 위치의 Y좌표 (올린 후)
+        endAttitude = currentMotion.attitude.copy() as? CMAttitude
+        
+        startButton.setTitle("측정 시작", for: .normal)
+        
+        calculateHeight()
+    }
+    
+    func calculateHeight() {
+        guard let startAtt = startAttitude, let endAtt = endAttitude else {
+            statusLabel.text = "센서 데이터를 읽을 수 없습니다"
+            return
         }
-        button:active { background-color: #2b6cb0; }
-    </style>
-</head>
-<body>
-
-    <div id="ui-container">
-        <h2>공간 좌표 높이 측정</h2>
-        <div class="info" id="status">AR 기능을 지원하는 브라우저에서 실행해주세요.</div>
-        <div>높이 변화 (Y 좌표)</div>
-        <div class="metric" id="heightDisplay">0.00 cm</div>
-        <button id="startAR" onclick="startARSession()">AR 측정 시작</button>
-    </div>
-
-    <!-- Three.js 및 WebXR 라이브러리 로드 -->
-    <script type="importmap">
-        {
-          "imports": {
-            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-          }
+        
+        // Y좌표 변화량
+        let yDifference = abs(endY - startY)
+        
+        // 각도 변화 계산
+        let yawDifference = endAtt.yaw - startAtt.yaw
+        let pitchDifference = endAtt.pitch - startAtt.pitch
+        let rollDifference = endAtt.roll - startAtt.roll
+        
+        // 각도 변화 크기
+        let angleChange = sqrt(pitchDifference * pitchDifference + rollDifference * rollDifference)
+        
+        // 높이 계산 (mm 단위)
+        var heightMM = yDifference * calibrationFactor
+        
+        // 각도 보정 적용
+        if angleChange > 0 {
+            heightMM /= (1.0 + angleChange * 0.5) // 각도 변화에 따른 보정
         }
-    </script>
-
-    <script type="module">
-        import * as THREE from 'three';
-        import { ARButton } from 'https://unpkg.com/three@0.160.0/examples/jsm/webxr/ARButton.js';
-
-        let container;
-        let camera, scene, renderer;
-        let startY = null;
-        let isTracking = false;
-
-        const heightDisplay = document.getElementById('heightDisplay');
-        const statusDiv = document.getElementById('status');
-        const startBtn = document.getElementById('startAR');
-
-        window.startARSession = function() {
-            if ('xr' in navigator) {
-                navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
-                    if (supported) {
-                        initAR();
-                    } else {
-                        alert('이 기기 또는 브라우저는 WebXR AR을 지원하지 않습니다. (Chrome 또는 Safari 최신 버전 필요)');
-                    }
-                });
-            } else {
-                alert('WebXR을 지원하지 않는 브라우저입니다.');
-            }
-        };
-
-        function initAR() {
-            startBtn.style.display = 'none';
-            container = document.createElement('div');
-            document.body.appendChild(container);
-
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
-
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.xr.enabled = true;
-            container.appendChild(renderer.domElement);
-
-            // AR 세션 시작 옵션 (viewer 공간 추적)
-            let currentSession = null;
+        
+        // 오차 범위 내에서 반올림
+        heightMM = round(heightMM) // ±1mm 범위
+        
+        updateResultDisplay(heightMM: heightMM)
+    }
+    
+    func updateResultDisplay(heightMM: Double? = nil) {
+        if let heightMM = heightMM {
+            let unit = unitSegmentControl.selectedSegmentIndex == 0 ? "cm" : "mm"
+            let displayValue = unit == "cm" ? heightMM / 10.0 : heightMM
             
-            navigator.xr.requestSession('immersive-ar', { 
-                requiredFeatures: ['local'] 
-            }).then((session) => {
-                currentSession = session;
-                renderer.xr.setSession(session);
-                statusDiv.textContent = '측정 중: 핸드폰을 위아래로 움직여보세요.';
-                isTracking = true;
-
-                session.addEventListener('end', () => {
-                    isTracking = false;
-                    startBtn.style.display = 'block';
-                    statusDiv.textContent = '세션이 종료되었습니다.';
-                });
-
-                renderer.setAnimationLoop(render);
-            });
+            resultLabel.text = String(format: "높이: %.1f %@", displayValue, unit)
+            statusLabel.text = "측정 완료"
         }
-
-        function render(timestamp, frame) {
-            if (frame && isTracking) {
-                const referenceSpace = renderer.xr.getReferenceSpace();
-                const session = renderer.xr.getSession();
-                
-                // 카메라(핸드폰)의 현재 공간 Pose 가져오기
-                const pose = frame.getViewerPose(referenceSpace);
-                
-                if (pose) {
-                    const currentY = pose.transform.position.y; // 미터 단위 Y 좌표
-
-                    if (startY === null) {
-                        startY = currentY; // 첫 시작 지점을 기준점(0)으로 설정
-                    }
-
-                    // 기준점으로부터의 높이 변동 계산 (미터 -> 센티미터)
-                    const diffY = (currentY - startY) * 100;
-
-                    heightDisplay.textContent = diffY.toFixed(2) + ' cm';
-                }
-            }
-            renderer.render(scene, camera);
-        }
-    </script>
-</body>
-</html>
+    }
+    
+    deinit {
+        motionManager.stopDeviceMotionUpdates()
+    }
+}
