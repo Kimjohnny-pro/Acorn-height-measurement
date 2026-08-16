@@ -265,6 +265,11 @@
             color: #721c24;
         }
 
+        .sensor-status.waiting {
+            background: #cfe2ff;
+            color: #084298;
+        }
+
         .footer {
             text-align: center;
             font-size: 12px;
@@ -284,6 +289,7 @@
             justify-content: center;
             align-items: center;
             padding: 20px;
+            overflow-y: auto;
         }
 
         .modal.show {
@@ -300,6 +306,7 @@
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             max-height: 90vh;
             overflow-y: auto;
+            margin: auto;
         }
 
         .modal-title {
@@ -314,6 +321,7 @@
             color: #666;
             margin-bottom: 20px;
             line-height: 1.6;
+            text-align: left;
         }
 
         .modal-buttons {
@@ -325,31 +333,43 @@
             flex: 1;
         }
 
-        .modal-close {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: #999;
-        }
-
-        .permission-alert {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
+        .step-guide {
+            background: #f9f9f9;
             border-radius: 8px;
             padding: 15px;
-            margin-bottom: 20px;
+            margin: 15px 0;
+            text-align: left;
+        }
+
+        .step-item {
+            margin-bottom: 12px;
             font-size: 13px;
-            color: #856404;
             line-height: 1.6;
         }
 
-        .permission-alert strong {
+        .step-item strong {
+            color: #667eea;
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
+        }
+
+        .step-item code {
+            background: #e8f0fe;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', monospace;
+            color: #1967d2;
+        }
+
+        .footer-note {
+            font-size: 12px;
+            color: #999;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .close-modal-btn {
+            margin-top: 15px;
         }
 
         @media (max-width: 480px) {
@@ -369,23 +389,21 @@
                 padding: 12px;
                 font-size: 14px;
             }
+
+            .modal-content {
+                padding: 20px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📏 높이 측정기</h1>
-        <p class="subtitle">DeviceOrientation API 기반 정밀 측정</p>
+        <p class="subtitle">정밀 센서 기반 높이 측정 앱</p>
 
         <!-- 센서 상태 -->
-        <div class="sensor-status" id="sensorStatus">
+        <div class="sensor-status waiting" id="sensorStatus">
             센서 초기화 중...
-        </div>
-
-        <!-- 권한 안내 -->
-        <div class="permission-alert" id="permissionAlert" style="display: none;">
-            <strong>⚠️ 권한 필요</strong>
-            iOS 설정 > 개인정보 보호 > 모션 & 피트니스에서 이 앱에 대한 접근을 허용해주세요.
         </div>
 
         <!-- 단위 선택 -->
@@ -406,7 +424,7 @@
             <div class="calibration-hint">캘리브레이션 높이를 입력하세요 (예: 10cm = 100mm)</div>
             <input type="number" id="calibrationHeight" class="calibration-input" placeholder="높이 입력 (mm 단위)" value="100" min="10" max="1000">
             <div class="button-group">
-                <button class="btn btn-primary" id="startCalibrationBtn">캘리브레이션 시작</button>
+                <button class="btn btn-primary" id="startCalibrationBtn" disabled>캘리브레이션 시작</button>
             </div>
         </div>
 
@@ -432,15 +450,130 @@
         </div>
     </div>
 
+    <!-- 권한 안내 모달 (최초 실행) -->
+    <div class="modal show" id="permissionGuideModal">
+        <div class="modal-content">
+            <div class="modal-title">⚙️ 권한 설정 필요</div>
+            <div class="modal-text">
+                <p style="margin-bottom: 15px;">이 앱을 사용하려면 다음 권한을 허용해야 합니다:</p>
+                
+                <div class="step-guide">
+                    <div class="step-item">
+                        <strong>✓ 모션 & 피트니스 권한</strong>
+                        앱이 핸드폰의 기울기와 움직임을 감지하여 정확한 높이를 측정합니다.
+                    </div>
+                </div>
+
+                <p style="font-weight: 600; color: #333; margin: 20px 0;">📱 권한 설정 방법:</p>
+                
+                <div class="step-guide">
+                    <div class="step-item">
+                        <strong>1단계: 설정 앱 열기</strong>
+                        홈 화면에서 "설정" 앱을 탭합니다.
+                    </div>
+                    
+                    <div class="step-item">
+                        <strong>2단계: 개인정보 보호 메뉴</strong>
+                        아래로 스크롤하여 <code>개인정보 보호</code>를 탭합니다.
+                    </div>
+                    
+                    <div class="step-item">
+                        <strong>3단계: 모션 & 피트니스</strong>
+                        <code>개인정보 보호</code> 메뉴에서 <code>모션 & 피트니스</code>를 탭합니다.
+                    </div>
+                    
+                    <div class="step-item">
+                        <strong>4단계: Safari 허용</strong>
+                        <code>Safari</code> 또는 사용 중인 브라우저 옆의 토글을 ON으로 설정합니다.
+                    </div>
+                </div>
+
+                <div class="warning-box" style="margin-top: 20px;">
+                    <strong>⚠️ 권한을 허용하지 않으면:</strong><br>
+                    앱을 사용할 수 없으며, 센서를 감지하지 못한다는 오류가 발생합니다.
+                </div>
+
+                <p style="font-size: 12px; color: #999; margin-top: 15px;">
+                    위 과정을 완료한 후 아래 "확인" 버튼을 눌러주세요.
+                </p>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" id="permissionConfirmBtn">확인했습니다</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 센서 감지 실패 모달 -->
+    <div class="modal" id="sensorErrorModal">
+        <div class="modal-content">
+            <div class="modal-title">❌ 센서 감지 실패</div>
+            <div class="modal-text">
+                <p style="margin-bottom: 15px;">센서를 감지하지 못했습니다. 다음을 확인해주세요:</p>
+                
+                <div class="step-guide">
+                    <div class="step-item">
+                        <strong>1. 권한 확인</strong>
+                        설정 > 개인정보 보호 > 모션 & 피트니스에서 Safari가 허용되어 있는지 확인하세요.
+                    </div>
+                    
+                    <div class="step-item">
+                        <strong>2. Safari 재시작</strong>
+                        Safari를 완전히 종료하고 다시 열어주세요.
+                    </div>
+                    
+                    <div class="step-item">
+                        <strong>3. 페이지 새로고침</strong>
+                        화면을 아래로 당겨 새로고침 하거나, 주소창의 새로고침 버튼을 탭하세요.
+                    </div>
+                    
+                    <div class="step-item">
+                        <strong>4. iPhone 재시작</strong>
+                        iPhone을 재부팅해주세요. (전원 버튼 + 볼륨 버튼을 길게 눌러 종료)
+                    </div>
+                </div>
+
+                <div class="error-box" style="margin-top: 20px;">
+                    <strong>💡 팁:</strong><br>
+                    기기가 "모션" 센서를 지원해야 합니다. 대부분의 현대 iPhone이 지원하고 있습니다.
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" id="retryBtn">다시 시도</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 캘리브레이션 안내 모달 -->
     <div class="modal" id="calibrationModal">
         <div class="modal-content">
             <div class="modal-title">📐 캘리브레이션 안내</div>
             <div class="modal-text">
-                <strong>1.</strong> 핸드폰을 평탄한 곳에 정확히 수직으로 놓습니다<br><br>
-                <strong>2.</strong> 아래의 "시작" 버튼을 누릅니다<br><br>
-                <strong>3.</strong> 입력한 높이만큼 핸드폰을 천천히 들어올립니다<br><br>
-                <strong>4.</strong> "완료" 버튼을 누릅니다
+                <strong>캘리브레이션은 정확한 측정을 위한 필수 과정입니다.</strong><br><br>
+                
+                <div class="step-guide">
+                    <div class="step-item">
+                        <strong>1단계:</strong> 핸드폰을 평탄한 곳에 정확히 <strong>수직</strong>으로 놓습니다.
+                    </div>
+                    
+                    <div class="step-item">
+                        <strong>2단계:</strong> 아래의 "시작" 버튼을 탭합니다.
+                    </div>
+                    
+                    <div class="step-item">
+                        <strong>3단계:</strong> 입력한 높이만큼 핸드폰을 <strong>천천히 일정하게</strong> 들어올립니다.
+                    </div>
+                    
+                    <div class="step-item">
+                        <strong>4단계:</strong> "완료" 버튼을 탭합니다.
+                    </div>
+                </div>
+
+                <div class="warning-box" style="margin-top: 20px;">
+                    <strong>⚠️ 주의:</strong><br>
+                    • 핸드폰을 기울이지 않도록 주의하세요<br>
+                    • 정확한 높이로 움직여야 정확한 측정이 가능합니다<br>
+                    • 부드럽고 일정한 속도로 올려주세요
+                </div>
             </div>
             <div class="modal-buttons">
                 <button class="btn btn-secondary" onclick="closeCalibrationModal()">취소</button>
@@ -449,13 +582,13 @@
         </div>
     </div>
 
-    <!-- 측정 중 모달 -->
+    <!-- 캘리브레이션 진행 중 모달 -->
     <div class="modal" id="calibrationInProgressModal">
         <div class="modal-content">
             <div class="modal-title">📐 캘리브레이션 진행 중</div>
             <div class="modal-text">
                 입력한 높이만큼 핸드폰을 들어올리고 있습니다...<br><br>
-                천천히 정확하게 들어올려 주세요.
+                <strong>천천히 정확하게 들어올려 주세요.</strong>
             </div>
             <div class="modal-buttons">
                 <button class="btn btn-primary" id="completeCalibrationBtn">완료</button>
@@ -468,10 +601,30 @@
         <div class="modal-content">
             <div class="modal-title">📏 높이 측정 안내</div>
             <div class="modal-text">
-                <strong>1.</strong> 핸드폰을 측정할 대상의 하단에 놓습니다<br><br>
-                <strong>2.</strong> 아래의 "시작" 버튼을 누릅니다<br><br>
-                <strong>3.</strong> 핸드폰을 상단까지 천천히 들어올립니다<br><br>
-                <strong>4.</strong> "완료" 버튼을 누릅니다
+                <strong>정확한 측정을 위해 다음 단계를 따라주세요:</strong><br><br>
+                
+                <div class="step-guide">
+                    <div class="step-item">
+                        <strong>1단계:</strong> 핸드폰을 측정할 대상의 하단에 놓습니다.
+                    </div>
+                    
+                    <div class="step-item">
+                        <strong>2단계:</strong> "시작" 버튼을 탭합니다.
+                    </div>
+                    
+                    <div class="step-item">
+                        <strong>3단계:</strong> 핸드폰을 대상의 상단까지 <strong>천천히 일정하게</strong> 들어올립니다.
+                    </div>
+                    
+                    <div class="step-item">
+                        <strong>4단계:</strong> "완료" 버튼을 탭합니다.
+                    </div>
+                </div>
+
+                <div class="info-box" style="margin-top: 20px;">
+                    <strong>💡 팁:</strong><br>
+                    핸드폰을 기울이지 않고 정확히 수직으로 들어올릴수록 측정 오차가 줄어듭니다.
+                </div>
             </div>
             <div class="modal-buttons">
                 <button class="btn btn-secondary" onclick="closeMeasurementModal()">취소</button>
@@ -485,8 +638,8 @@
         <div class="modal-content">
             <div class="modal-title">📏 측정 진행 중</div>
             <div class="modal-text">
-                핸드폰을 상단까지 천천히 들어올리고 있습니다...<br><br>
-                움직임을 멈추고 "완료"를 누르세요.
+                핸드폰을 상단까지 들어올리고 있습니다...<br><br>
+                <strong>움직임을 멈추고 "완료"를 누르세요.</strong>
             </div>
             <div class="modal-buttons">
                 <button class="btn btn-primary" id="completeMeasurementBtn">완료</button>
@@ -502,6 +655,7 @@
                 this.isMeasuring = false;
                 this.isCalibratingNow = false;
                 this.sensorAvailable = false;
+                this.permissionRequested = false;
                 
                 // 센서 데이터
                 this.currentAlpha = 0;
@@ -524,81 +678,15 @@
                 this.endY = 0;
                 this.maxYMovement = 0;
                 
-                this.checkPermissionAndInit();
                 this.setupEventListeners();
+                this.setupPermissionConfirm();
             }
 
-            checkPermissionAndInit() {
-                const sensorStatus = document.getElementById('sensorStatus');
-                const permissionAlert = document.getElementById('permissionAlert');
-
-                // iOS 13+에서 DeviceOrientation 권한 요청
-                if (typeof DeviceOrientationEvent !== 'undefined') {
-                    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                        // iOS 13+
-                        sensorStatus.textContent = '센서 권한을 요청 중입니다...';
-                        sensorStatus.classList.remove('ok', 'error');
-                        
-                        DeviceOrientationEvent.requestPermission()
-                            .then((permission) => {
-                                if (permission === 'granted') {
-                                    this.initSensors();
-                                } else if (permission === 'denied') {
-                                    this.handlePermissionDenied();
-                                }
-                            })
-                            .catch((error) => {
-                                console.error('권한 요청 오류:', error);
-                                // 오류 발생시에도 센서 초기화 시도
-                                this.initSensors();
-                            });
-                    } else {
-                        // iOS 12 이하 또는 다른 브라우저
-                        this.initSensors();
-                    }
-                } else {
-                    sensorStatus.textContent = '✗ 이 기기는 센서를 지원하지 않습니다';
-                    sensorStatus.classList.add('error');
-                }
-            }
-
-            initSensors() {
-                const sensorStatus = document.getElementById('sensorStatus');
-                
-                // DeviceOrientation 이벤트 리스너 등록
-                const handleOrientation = (event) => {
-                    this.currentAlpha = event.alpha || 0;
-                    this.currentBeta = event.beta || 0;
-                    this.currentGamma = event.gamma || 0;
-
-                    if (!this.sensorAvailable) {
-                        this.sensorAvailable = true;
-                        sensorStatus.textContent = '✓ 센서 준비 완료';
-                        sensorStatus.classList.remove('error');
-                        sensorStatus.classList.add('ok');
-                        this.enableCalibration();
-                    }
-                };
-
-                window.addEventListener('deviceorientation', handleOrientation, false);
-                window.addEventListener('deviceorientationabsolute', handleOrientation, false);
-
-                // 타임아웃: 2초 후 센서 데이터가 없으면 경고
-                setTimeout(() => {
-                    if (!this.sensorAvailable) {
-                        sensorStatus.textContent = '⚠️ 센서를 감지하지 못했습니다. 다시 시도하거나 설정을 확인하세요.';
-                        sensorStatus.classList.add('error');
-                    }
-                }, 2000);
-            }
-
-            handlePermissionDenied() {
-                const sensorStatus = document.getElementById('sensorStatus');
-                const permissionAlert = document.getElementById('permissionAlert');
-                
-                sensorStatus.textContent = '✗ 센서 권한이 거부되었습니다';
-                sensorStatus.classList.add('error');
-                permissionAlert.style.display = 'block';
+            setupPermissionConfirm() {
+                document.getElementById('permissionConfirmBtn').addEventListener('click', () => {
+                    document.getElementById('permissionGuideModal').classList.remove('show');
+                    this.requestSensorPermission();
+                });
             }
 
             setupEventListeners() {
@@ -650,6 +738,12 @@
                     this.reset();
                 });
 
+                // 재시도
+                document.getElementById('retryBtn').addEventListener('click', () => {
+                    document.getElementById('sensorErrorModal').classList.remove('show');
+                    this.requestSensorPermission();
+                });
+
                 // Y좌표 추적 (터치)
                 document.addEventListener('touchstart', (e) => {
                     if (this.isMeasuring || this.isCalibratingNow) {
@@ -667,6 +761,81 @@
                         }
                     }
                 }, { passive: true });
+            }
+
+            requestSensorPermission() {
+                const sensorStatus = document.getElementById('sensorStatus');
+
+                if (typeof DeviceOrientationEvent !== 'undefined') {
+                    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                        // iOS 13+
+                        sensorStatus.textContent = '센서 권한을 요청 중입니다...';
+                        sensorStatus.classList.remove('ok', 'error');
+                        sensorStatus.classList.add('waiting');
+                        
+                        DeviceOrientationEvent.requestPermission()
+                            .then((permission) => {
+                                if (permission === 'granted') {
+                                    this.initSensors();
+                                } else if (permission === 'denied') {
+                                    this.handlePermissionDenied();
+                                }
+                            })
+                            .catch((error) => {
+                                console.error('권한 요청 오류:', error);
+                                this.initSensors(); // 오류 발생시에도 시도
+                            });
+                    } else {
+                        // iOS 12 이하 또는 다른 브라우저
+                        this.initSensors();
+                    }
+                } else {
+                    sensorStatus.textContent = '✗ 이 기기는 센서를 지원하지 않습니다';
+                    sensorStatus.classList.remove('waiting', 'ok');
+                    sensorStatus.classList.add('error');
+                }
+            }
+
+            initSensors() {
+                const sensorStatus = document.getElementById('sensorStatus');
+                let sensorDetected = false;
+
+                const handleOrientation = (event) => {
+                    this.currentAlpha = event.alpha || 0;
+                    this.currentBeta = event.beta || 0;
+                    this.currentGamma = event.gamma || 0;
+
+                    if (!sensorDetected) {
+                        sensorDetected = true;
+                        this.sensorAvailable = true;
+                        sensorStatus.textContent = '✓ 센서 준비 완료';
+                        sensorStatus.classList.remove('error', 'waiting');
+                        sensorStatus.classList.add('ok');
+                        this.enableCalibration();
+                    }
+                };
+
+                window.addEventListener('deviceorientation', handleOrientation, false);
+                window.addEventListener('deviceorientationabsolute', handleOrientation, false);
+
+                // 타임아웃: 3초 후 센서 데이터가 없으면 오류 표시
+                setTimeout(() => {
+                    if (!sensorDetected) {
+                        this.showSensorError();
+                    }
+                }, 3000);
+            }
+
+            handlePermissionDenied() {
+                const sensorStatus = document.getElementById('sensorStatus');
+                sensorStatus.textContent = '✗ 센서 권한이 거부되었습니다';
+                sensorStatus.classList.remove('waiting', 'ok');
+                sensorStatus.classList.add('error');
+                this.showSensorError();
+            }
+
+            showSensorError() {
+                document.getElementById('sensorErrorModal').classList.add('show');
             }
 
             enableCalibration() {
@@ -715,7 +884,7 @@
                     (gammaDiff * Math.PI / 180) ** 2
                 );
 
-                // 캘리브레이션 계수 = 실제 높이(mm) / 화면 Y좌표 변화량(픽셀)
+                // 캘리브레이션 계수
                 this.calibrationFactor = this.calibrationHeight / yDifference;
 
                 // 각도에 따른 보정
@@ -763,7 +932,6 @@
             }
 
             calculateHeight() {
-                // 실제 Y좌표 변화량
                 const yDifference = this.maxYMovement;
 
                 if (yDifference < 5) {
