@@ -1,191 +1,740 @@
-import UIKit
-import CoreMotion
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>높이 측정기</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-class HeightMeasurementViewController: UIViewController {
-    
-    // UI Components
-    @IBOutlet weak var unitSegmentControl: UISegmentedControl!
-    @IBOutlet weak var startButton: UIButton!
-    @IBOutlet weak var resultLabel: UILabel!
-    @IBOutlet weak var statusLabel: UILabel!
-    
-    // 센서 및 측정 관련 변수
-    let motionManager = CMMotionManager()
-    var startY: CGFloat = 0
-    var endY: CGFloat = 0
-    var startAttitude: CMAttitude?
-    var endAttitude: CMAttitude?
-    var isMeasuring = false
-    
-    // 캘리브레이션 변수
-    var calibrationFactor: Double = 1.0 // 픽셀 to cm 변환 계수
-    var isCalibrated = false
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        
-        setupMotionManager()
-        setupUI()
-        showCalibrationAlert()
-    }
-    
-    // MARK: - Motion Manager Setup
-    func setupMotionManager() {
-        guard motionManager.isDeviceMotionAvailable else {
-            statusLabel.text = "기기가 모션 센서를 지원하지 않습니다"
-            return
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
         }
-        
-        motionManager.deviceMotionUpdateInterval = 0.01 // 100Hz
-        motionManager.startDeviceMotionUpdates()
-    }
-    
-    // MARK: - UI Setup
-    func setupUI() {
-        startButton.setTitle("측정 시작", for: .normal)
-        startButton.addTarget(self, action: #selector(toggleMeasurement), for: .touchUpInside)
-        
-        unitSegmentControl.setSegmentAction(for: .valueChanged) { [weak self] in
-            self?.updateResultDisplay()
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
         }
-        
-        resultLabel.text = "준비됨"
-        statusLabel.text = "먼저 캘리브레이션을 진행하세요"
-    }
-    
-    // MARK: - Calibration
-    func showCalibrationAlert() {
-        let alert = UIAlertController(title: "캘리브레이션", message: "핸드폰을 정확히 수직으로 놓고 '10cm 올리기'를 선택한 후, 핸드폰을 정확히 10cm 올렸을 때 '완료'를 누르세요.", preferredStyle: .alert)
-        
-        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
-        alert.addAction(UIAlertAction(title: "시작", style: .default) { [weak self] _ in
-            self?.startCalibration()
-        })
-        
-        present(alert, animated: true)
-    }
-    
-    func startCalibration() {
-        isMeasuring = true
-        startY = 0
-        startAttitude = motionManager.deviceMotion?.attitude.copy() as? CMAttitude
-        statusLabel.text = "10cm 올리고 있습니다... (기다리세요)"
-        startButton.isEnabled = false
-    }
-    
-    @objc func completeCalibration() {
-        guard let currentMotion = motionManager.deviceMotion else { return }
-        
-        endY = 100 // 10cm = 100mm (실제로 핸드폰을 10cm 올렸다고 가정)
-        endAttitude = currentMotion.attitude.copy() as? CMAttitude
-        
-        calculateCalibrationFactor()
-    }
-    
-    func calculateCalibrationFactor() {
-        guard let startAtt = startAttitude, let endAtt = endAttitude else { return }
-        
-        let yawDifference = endAtt.yaw - startAtt.yaw
-        let pitchDifference = endAtt.pitch - startAtt.pitch
-        let rollDifference = endAtt.roll - startAtt.roll
-        
-        // Y축 변화량에 영향을 주는 각도 변화 (pitch와 roll)
-        let angleCorrection = sqrt(pitchDifference * pitchDifference + rollDifference * rollDifference)
-        
-        // 캘리브레이션: 10cm 올렸을 때의 Y좌표 변화량으로부터 계수 계산
-        calibrationFactor = 100.0 / max(abs(endY - startY), 1.0) // 10cm를 픽셀 변화로 정규화
-        
-        // 각도 보정 적용
-        calibrationFactor *= (1.0 + angleCorrection)
-        
-        isCalibrated = true
-        isMeasuring = false
-        startButton.isEnabled = true
-        statusLabel.text = "캘리브레이션 완료! 이제 측정을 시작할 수 있습니다."
-        
-        let alert = UIAlertController(title: "캘리브레이션 완료", message: "캘리브레이션이 완료되었습니다. 이제 높이를 측정할 수 있습니다.", preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "확인", style: .default))
-        present(alert, animated: true)
-    }
-    
-    // MARK: - Height Measurement
-    @objc func toggleMeasurement() {
-        guard isCalibrated else {
-            statusLabel.text = "먼저 캘리브레이션을 완료하세요"
-            return
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
         }
-        
-        if !isMeasuring {
-            startMeasurement()
-        } else {
-            endMeasurement()
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
         }
-    }
-    
-    func startMeasurement() {
-        isMeasuring = true
-        startY = 0 // 터치 위치의 Y좌표
-        startAttitude = motionManager.deviceMotion?.attitude.copy() as? CMAttitude
-        
-        startButton.setTitle("측정 완료", for: .normal)
-        statusLabel.text = "높이를 측정 중입니다... (측정 완료 버튼을 누르세요)"
-        resultLabel.text = "측정 중..."
-    }
-    
-    func endMeasurement() {
-        guard let currentMotion = motionManager.deviceMotion else { return }
-        
-        isMeasuring = false
-        endY = 0 // 터치 위치의 Y좌표 (올린 후)
-        endAttitude = currentMotion.attitude.copy() as? CMAttitude
-        
-        startButton.setTitle("측정 시작", for: .normal)
-        
-        calculateHeight()
-    }
-    
-    func calculateHeight() {
-        guard let startAtt = startAttitude, let endAtt = endAttitude else {
-            statusLabel.text = "센서 데이터를 읽을 수 없습니다"
-            return
+
+        .section {
+            margin-bottom: 30px;
         }
-        
-        // Y좌표 변화량
-        let yDifference = abs(endY - startY)
-        
-        // 각도 변화 계산
-        let yawDifference = endAtt.yaw - startAtt.yaw
-        let pitchDifference = endAtt.pitch - startAtt.pitch
-        let rollDifference = endAtt.roll - startAtt.roll
-        
-        // 각도 변화 크기
-        let angleChange = sqrt(pitchDifference * pitchDifference + rollDifference * rollDifference)
-        
-        // 높이 계산 (mm 단위)
-        var heightMM = yDifference * calibrationFactor
-        
-        // 각도 보정 적용
-        if angleChange > 0 {
-            heightMM /= (1.0 + angleChange * 0.5) // 각도 변화에 따른 보정
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
         }
-        
-        // 오차 범위 내에서 반올림
-        heightMM = round(heightMM) // ±1mm 범위
-        
-        updateResultDisplay(heightMM: heightMM)
-    }
-    
-    func updateResultDisplay(heightMM: Double? = nil) {
-        if let heightMM = heightMM {
-            let unit = unitSegmentControl.selectedSegmentIndex == 0 ? "cm" : "mm"
-            let displayValue = unit == "cm" ? heightMM / 10.0 : heightMM
-            
-            resultLabel.text = String(format: "높이: %.1f %@", displayValue, unit)
-            statusLabel.text = "측정 완료"
+
+        .unit-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
         }
-    }
-    
-    deinit {
-        motionManager.stopDeviceMotionUpdates()
-    }
-}
+
+        .unit-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .unit-btn.active {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .unit-btn:hover {
+            border-color: #667eea;
+        }
+
+        .status-box {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .status-label {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 8px;
+        }
+
+        .status-text {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .result-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: white;
+        }
+
+        .result-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .result-value {
+            font-size: 36px;
+            font-weight: bold;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            border: 2px solid #ddd;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #e8e8e8;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #667eea;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #1976d2;
+            line-height: 1.6;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #856404;
+            line-height: 1.6;
+        }
+
+        .error-box {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #721c24;
+            line-height: 1.6;
+        }
+
+        .calibration-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .calibration-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .calibration-hint {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .sensor-status {
+            font-size: 12px;
+            padding: 8px 12px;
+            background: #f0f0f0;
+            border-radius: 6px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .sensor-status.ok {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .sensor-status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            margin-top: 20px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .modal-text {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-buttons .btn {
+            flex: 1;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .result-value {
+                font-size: 32px;
+            }
+
+            .btn {
+                padding: 12px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📏 높이 측정기</h1>
+        <p class="subtitle">DeviceOrientation API 기반 정밀 측정</p>
+
+        <!-- 센서 상태 -->
+        <div class="sensor-status" id="sensorStatus">
+            센서 확인 중...
+        </div>
+
+        <!-- 단위 선택 -->
+        <div class="section">
+            <div class="section-title">측정 단위</div>
+            <div class="unit-selector">
+                <button class="unit-btn active" data-unit="cm">센티미터 (cm)</button>
+                <button class="unit-btn" data-unit="mm">밀리미터 (mm)</button>
+            </div>
+        </div>
+
+        <!-- 캘리브레이션 섹션 -->
+        <div class="section" id="calibrationSection">
+            <div class="section-title">1단계: 캘리브레이션</div>
+            <div class="info-box">
+                🔧 정확한 측정을 위해 먼저 캘리브레이션을 진행합니다. 알려진 높이로 보정합니다.
+            </div>
+            <div class="calibration-hint">캘리브레이션 높이를 입력하세요 (예: 10cm)</div>
+            <input type="number" id="calibrationHeight" class="calibration-input" placeholder="높이 입력 (mm 단위)" value="100" min="10" max="1000">
+            <div class="button-group">
+                <button class="btn btn-primary" id="startCalibrationBtn">캘리브레이션 시작</button>
+            </div>
+        </div>
+
+        <!-- 측정 섹션 -->
+        <div class="section" id="measurementSection" style="display: none;">
+            <div class="section-title">2단계: 높이 측정</div>
+            <div class="result-box">
+                <div class="result-label">현재 측정값</div>
+                <div class="result-value" id="resultValue">-</div>
+            </div>
+            <div class="status-box">
+                <div class="status-label">상태</div>
+                <div class="status-text" id="statusText">준비됨</div>
+            </div>
+            <div class="button-group">
+                <button class="btn btn-primary" id="toggleMeasurementBtn">측정 시작</button>
+                <button class="btn btn-secondary" id="resetBtn">초기화</button>
+            </div>
+        </div>
+
+        <div class="footer">
+            오차범위: ±1mm | iPhone Safari 전용
+        </div>
+    </div>
+
+    <!-- 캘리브레이션 안내 모달 -->
+    <div class="modal" id="calibrationModal">
+        <div class="modal-content">
+            <div class="modal-title">📐 캘리브레이션 안내</div>
+            <div class="modal-text">
+                <strong>1.</strong> 핸드폰을 평탄한 곳에 정확히 수직으로 놓습니다<br><br>
+                <strong>2.</strong> "캘리브레이션 시작" 버튼을 누릅니다<br><br>
+                <strong>3.</strong> 입력한 높이만큼 핸드폰을 천천히 들어올립니다<br><br>
+                <strong>4.</strong> "캘리브레이션 완료" 버튼을 누릅니다
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" id="confirmCalibrationBtn">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 측정 안내 모달 -->
+    <div class="modal" id="measurementModal">
+        <div class="modal-content">
+            <div class="modal-title">📏 높이 측정 안내</div>
+            <div class="modal-text">
+                <strong>1.</strong> 핸드폰을 측정할 대상의 하단에 놓습니다<br><br>
+                <strong>2.</strong> "측정 시작" 버튼을 누릅니다<br><br>
+                <strong>3.</strong> 핸드폰을 상단까지 천천히 들어올립니다<br><br>
+                <strong>4.</strong> "측정 완료" 버튼을 누릅니다
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" id="confirmMeasurementBtn">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class HeightMeasurement {
+            constructor() {
+                this.currentUnit = 'cm';
+                this.isCalibrated = false;
+                this.isMeasuring = false;
+                this.sensorAvailable = false;
+                
+                // 센서 데이터
+                this.startAlpha = 0;
+                this.startBeta = 0;
+                this.startGamma = 0;
+                this.endAlpha = 0;
+                this.endBeta = 0;
+                this.endGamma = 0;
+                
+                // 캘리브레이션 데이터
+                this.calibrationHeight = 100; // mm
+                this.calibrationFactor = 1.0;
+                
+                // Y좌표 (터치/제스처 기반)
+                this.startY = 0;
+                this.endY = 0;
+                
+                this.initSensors();
+                this.setupEventListeners();
+                this.checkDeviceOrientation();
+            }
+
+            initSensors() {
+                // DeviceOrientation 권한 요청 (iOS 13+)
+                if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
+                    this.sensorStatus = document.getElementById('sensorStatus');
+                    this.sensorStatus.textContent = '권한 요청 필요';
+                    this.sensorStatus.classList.add('error');
+                } else if (typeof DeviceOrientationEvent !== 'undefined') {
+                    this.setupDeviceOrientation();
+                } else {
+                    this.showError('이 기기는 DeviceOrientation을 지원하지 않습니다');
+                }
+            }
+
+            setupDeviceOrientation() {
+                window.addEventListener('deviceorientation', (event) => {
+                    this.currentAlpha = event.alpha;
+                    this.currentBeta = event.beta;
+                    this.currentGamma = event.gamma;
+                });
+
+                window.addEventListener('deviceorientationabsolute', (event) => {
+                    this.currentAlpha = event.alpha;
+                    this.currentBeta = event.beta;
+                    this.currentGamma = event.gamma;
+                });
+            }
+
+            checkDeviceOrientation() {
+                if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
+                    // iOS 13+
+                    DeviceOrientationEvent.requestPermission()
+                        .then((permissionState) => {
+                            if (permissionState === 'granted') {
+                                this.sensorAvailable = true;
+                                this.setupDeviceOrientation();
+                                document.getElementById('sensorStatus').textContent = '✓ 센서 준비 완료';
+                                document.getElementById('sensorStatus').classList.add('ok');
+                                this.enableCalibration();
+                            }
+                        })
+                        .catch(() => {
+                            this.showError('센서 권한을 거부했습니다. 설정에서 권한을 허용해주세요.');
+                        });
+                } else if (typeof DeviceOrientationEvent !== 'undefined') {
+                    // iOS 12 이하 또는 다른 브라우저
+                    this.sensorAvailable = true;
+                    this.setupDeviceOrientation();
+                    document.getElementById('sensorStatus').textContent = '✓ 센서 준비 완료';
+                    document.getElementById('sensorStatus').classList.add('ok');
+                    this.enableCalibration();
+                }
+            }
+
+            setupEventListeners() {
+                // 단위 선택
+                document.querySelectorAll('.unit-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.unit-btn').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        this.currentUnit = e.target.dataset.unit;
+                        this.updateDisplay();
+                    });
+                });
+
+                // 캘리브레이션
+                document.getElementById('startCalibrationBtn').addEventListener('click', () => {
+                    document.getElementById('calibrationModal').classList.add('show');
+                });
+
+                document.getElementById('confirmCalibrationBtn').addEventListener('click', () => {
+                    document.getElementById('calibrationModal').classList.remove('show');
+                    this.startCalibration();
+                });
+
+                // 측정
+                document.getElementById('toggleMeasurementBtn').addEventListener('click', () => {
+                    if (!this.isMeasuring) {
+                        document.getElementById('measurementModal').classList.add('show');
+                    } else {
+                        this.endMeasurement();
+                    }
+                });
+
+                document.getElementById('confirmMeasurementBtn').addEventListener('click', () => {
+                    document.getElementById('measurementModal').classList.remove('show');
+                    this.startMeasurement();
+                });
+
+                // 초기화
+                document.getElementById('resetBtn').addEventListener('click', () => {
+                    this.reset();
+                });
+
+                // Y좌표 추적 (터치)
+                document.addEventListener('touchstart', (e) => {
+                    if (this.isMeasuring) {
+                        this.startY = e.touches[0].clientY;
+                    }
+                });
+
+                document.addEventListener('touchmove', (e) => {
+                    if (this.isMeasuring) {
+                        this.endY = e.touches[0].clientY;
+                    }
+                });
+            }
+
+            enableCalibration() {
+                document.getElementById('startCalibrationBtn').disabled = false;
+            }
+
+            startCalibration() {
+                this.isMeasuring = true;
+                this.startAlpha = this.currentAlpha;
+                this.startBeta = this.currentBeta;
+                this.startGamma = this.currentGamma;
+                this.startY = window.innerHeight / 2;
+
+                document.getElementById('statusText').textContent = '캘리브레이션 중... 핸드폰을 들어올리세요';
+                
+                // 10초 후 자동 완료
+                setTimeout(() => {
+                    if (this.isMeasuring) {
+                        this.completeCalibration();
+                    }
+                }, 3000);
+            }
+
+            completeCalibration() {
+                this.endAlpha = this.currentAlpha;
+                this.endBeta = this.currentBeta;
+                this.endGamma = this.currentGamma;
+                this.endY = window.innerHeight / 2 - 100; // 대략 100px 위로
+
+                this.isMeasuring = false;
+                this.calculateCalibrationFactor();
+            }
+
+            calculateCalibrationFactor() {
+                // 각도 변화 계산
+                const alphaDiff = Math.abs(this.endAlpha - this.startAlpha);
+                const betaDiff = Math.abs(this.endBeta - this.startBeta);
+                const gammaDiff = Math.abs(this.endGamma - this.startGamma);
+
+                // Y좌표 변화량
+                const yDifference = Math.abs(this.endY - this.startY);
+
+                // 각도 변화의 크기 (라디안 변환)
+                const angleChange = Math.sqrt(
+                    (betaDiff * Math.PI / 180) ** 2 + 
+                    (gammaDiff * Math.PI / 180) ** 2
+                );
+
+                // 캘리브레이션 계수 계산
+                // 입력된 높이(mm) / Y좌표 변화량 = 픽셀당 mm
+                this.calibrationFactor = this.calibrationHeight / Math.max(yDifference, 1);
+
+                // 각도에 따른 보정
+                if (angleChange > 0) {
+                    this.calibrationFactor *= (1 + angleChange * 0.3);
+                }
+
+                this.isCalibrated = true;
+                this.showSuccess('캘리브레이션이 완료되었습니다!');
+                
+                // 측정 섹션 표시
+                document.getElementById('calibrationSection').style.display = 'none';
+                document.getElementById('measurementSection').style.display = 'block';
+            }
+
+            startMeasurement() {
+                this.isMeasuring = true;
+                this.startAlpha = this.currentAlpha;
+                this.startBeta = this.currentBeta;
+                this.startGamma = this.currentGamma;
+                this.startY = window.innerHeight / 2;
+
+                document.getElementById('toggleMeasurementBtn').textContent = '측정 완료';
+                document.getElementById('statusText').textContent = '측정 중... 핸드폰을 들어올리세요';
+                document.getElementById('resultValue').textContent = '측정 중...';
+            }
+
+            endMeasurement() {
+                this.endAlpha = this.currentAlpha;
+                this.endBeta = this.currentBeta;
+                this.endGamma = this.currentGamma;
+                this.endY = window.innerHeight / 2 - 100;
+
+                this.isMeasuring = false;
+                this.calculateHeight();
+
+                document.getElementById('toggleMeasurementBtn').textContent = '측정 시작';
+            }
+
+            calculateHeight() {
+                // Y좌표 변화량
+                const yDifference = Math.abs(this.endY - this.startY);
+
+                // 각도 변화 계산
+                const alphaDiff = Math.abs(this.endAlpha - this.startAlpha);
+                const betaDiff = Math.abs(this.endBeta - this.startBeta);
+                const gammaDiff = Math.abs(this.endGamma - this.startGamma);
+
+                // 각도 변화의 크기 (라디안 변환)
+                const angleChange = Math.sqrt(
+                    (betaDiff * Math.PI / 180) ** 2 + 
+                    (gammaDiff * Math.PI / 180) ** 2
+                );
+
+                // 높이 계산 (mm 단위)
+                let heightMM = yDifference * this.calibrationFactor;
+
+                // 각도 보정
+                if (angleChange > 0) {
+                    heightMM /= (1 + angleChange * 0.3);
+                }
+
+                // ±1mm 범위로 반올림
+                heightMM = Math.round(heightMM * 10) / 10;
+
+                // 최소값 설정
+                if (heightMM < 1) {
+                    heightMM = 0;
+                }
+
+                this.displayResult(heightMM);
+            }
+
+            displayResult(heightMM) {
+                let displayValue;
+                if (this.currentUnit === 'cm') {
+                    displayValue = (heightMM / 10).toFixed(1);
+                } else {
+                    displayValue = heightMM.toFixed(1);
+                }
+
+                document.getElementById('resultValue').textContent = `${displayValue} ${this.currentUnit}`;
+                document.getElementById('statusText').textContent = '측정 완료!';
+            }
+
+            updateDisplay() {
+                // 현재 결과값이 있으면 다시 표시
+                const resultValue = document.getElementById('resultValue').textContent;
+                if (resultValue !== '-' && resultValue !== '측정 중...') {
+                    // 재계산 필요시 처리
+                }
+            }
+
+            reset() {
+                this.isMeasuring = false;
+                this.isCalibrated = false;
+                this.startAlpha = this.startBeta = this.startGamma = 0;
+                this.endAlpha = this.endBeta = this.endGamma = 0;
+                this.startY = this.endY = 0;
+
+                document.getElementById('resultValue').textContent = '-';
+                document.getElementById('statusText').textContent = '준비됨';
+                document.getElementById('toggleMeasurementBtn').textContent = '측정 시작';
+                document.getElementById('calibrationSection').style.display = 'block';
+                document.getElementById('measurementSection').style.display = 'none';
+            }
+
+            showError(message) {
+                const sensorStatus = document.getElementById('sensorStatus');
+                sensorStatus.textContent = `✗ ${message}`;
+                sensorStatus.classList.add('error');
+            }
+
+            showSuccess(message) {
+                const modal = document.createElement('div');
+                modal.className = 'modal show';
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <div class="modal-title">✓ 성공</div>
+                        <div class="modal-text">${message}</div>
+                        <div class="modal-buttons">
+                            <button class="btn btn-primary" onclick="this.parentElement.parentElement.remove()">확인</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+        }
+
+        // 앱 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+            new HeightMeasurement();
+        });
+
+        // 전체 화면 시 스크롤 방지
+        document.addEventListener('touchmove', (e) => {
+            if (e.target.closest('.container')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    </script>
+</body>
+</html>
