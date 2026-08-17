@@ -221,13 +221,18 @@
             line-height: 1.6;
         }
 
+        .calibration-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
         .calibration-input {
-            width: 100%;
+            flex: 1;
             padding: 12px;
             border: 2px solid #ddd;
             border-radius: 10px;
             font-size: 16px;
-            margin-bottom: 10px;
             -webkit-appearance: none;
             appearance: none;
         }
@@ -236,6 +241,17 @@
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .unit-display {
+            padding: 12px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            text-align: center;
+            font-weight: 600;
+            color: #333;
+            min-width: 60px;
         }
 
         .calibration-hint {
@@ -421,8 +437,11 @@
             <div class="info-box">
                 🔧 정확한 측정을 위해 먼저 캘리브레이션을 진행합니다. 알려진 높이로 보정합니다.
             </div>
-            <div class="calibration-hint">캘리브레이션 높이를 입력하세요 (예: 10cm = 100mm)</div>
-            <input type="number" id="calibrationHeight" class="calibration-input" placeholder="높이 입력 (mm 단위)" value="100" min="10" max="1000">
+            <div class="calibration-hint" id="calibrationHint">캘리브레이션 높이를 입력하세요 (예: 10cm)</div>
+            <div class="calibration-input-group">
+                <input type="number" id="calibrationHeight" class="calibration-input" placeholder="높이 입력" value="10" min="0.5" step="0.5">
+                <div class="unit-display" id="calibrationUnitDisplay">cm</div>
+            </div>
             <div class="button-group">
                 <button class="btn btn-primary" id="startCalibrationBtn" disabled>캘리브레이션 시작</button>
             </div>
@@ -446,7 +465,7 @@
         </div>
 
         <div class="footer">
-            오차범위: ±1mm | iPhone Safari 전용
+            최소 측정 높이: 5mm | 오차범위: ±1mm | iPhone Safari 전용
         </div>
     </div>
 
@@ -623,7 +642,7 @@
 
                 <div class="info-box" style="margin-top: 20px;">
                     <strong>💡 팁:</strong><br>
-                    핸드폰을 기울이지 않고 정확히 수직으로 들어올릴수록 측정 오차가 줄어듭니다.
+                    핸드폰을 기울이지 않고 정확히 수직으로 들어올릴수록 측정 오차가 줄어듭니다. 최소 5mm 이상 움직여야 합니다.
                 </div>
             </div>
             <div class="modal-buttons">
@@ -670,13 +689,16 @@
                 this.endGamma = 0;
                 
                 // 캘리브레이션 데이터
-                this.calibrationHeight = 100; // mm
+                this.calibrationHeight = 10; // cm 단위
                 this.calibrationFactor = 1.0;
                 
                 // Y좌표
                 this.startY = 0;
                 this.endY = 0;
                 this.maxYMovement = 0;
+                
+                // 최소 움직임 임계값 (픽셀)
+                this.MIN_MOVEMENT_PIXELS = 2; // 매우 낮은 임계값으로 설정
                 
                 this.setupEventListeners();
                 this.setupPermissionConfirm();
@@ -690,19 +712,31 @@
             }
 
             setupEventListeners() {
-                // 단위 선택
+                // 단위 선택 및 캘리브레이션 값 동기화
                 document.querySelectorAll('.unit-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         document.querySelectorAll('.unit-btn').forEach(b => b.classList.remove('active'));
                         e.target.classList.add('active');
                         this.currentUnit = e.target.dataset.unit;
+                        this.updateCalibrationUnit();
                         this.updateDisplay();
                     });
                 });
 
+                // 캘리브레이션 높이 입력 변경 시 단위 업데이트
+                document.getElementById('calibrationHeight').addEventListener('change', () => {
+                    this.updateCalibrationUnit();
+                });
+
                 // 캘리브레이션
                 document.getElementById('startCalibrationBtn').addEventListener('click', () => {
-                    this.calibrationHeight = parseInt(document.getElementById('calibrationHeight').value) || 100;
+                    const inputValue = parseFloat(document.getElementById('calibrationHeight').value) || 0;
+                    if (this.currentUnit === 'cm') {
+                        this.calibrationHeight = inputValue;
+                    } else {
+                        // mm 단위이면 cm으로 변환
+                        this.calibrationHeight = inputValue / 10;
+                    }
                     document.getElementById('calibrationModal').classList.add('show');
                 });
 
@@ -761,6 +795,21 @@
                         }
                     }
                 }, { passive: true });
+            }
+
+            updateCalibrationUnit() {
+                const unitDisplay = document.getElementById('calibrationUnitDisplay');
+                const hint = document.getElementById('calibrationHint');
+                
+                if (this.currentUnit === 'cm') {
+                    unitDisplay.textContent = 'cm';
+                    hint.textContent = '캘리브레이션 높이를 입력하세요 (예: 10cm)';
+                    document.getElementById('calibrationHeight').step = '0.5';
+                } else {
+                    unitDisplay.textContent = 'mm';
+                    hint.textContent = '캘리브레이션 높이를 입력하세요 (예: 100mm)';
+                    document.getElementById('calibrationHeight').step = '5';
+                }
             }
 
             requestSensorPermission() {
@@ -884,8 +933,10 @@
                     (gammaDiff * Math.PI / 180) ** 2
                 );
 
-                // 캘리브레이션 계수
-                this.calibrationFactor = this.calibrationHeight / yDifference;
+                // 캘리브레이션 계수 계산
+                // calibrationHeight는 cm 단위이므로 mm으로 변환
+                const calibrationHeightMM = this.calibrationHeight * 10;
+                this.calibrationFactor = calibrationHeightMM / yDifference;
 
                 // 각도에 따른 보정
                 if (angleChange > 0) {
@@ -934,8 +985,12 @@
             calculateHeight() {
                 const yDifference = this.maxYMovement;
 
-                if (yDifference < 5) {
-                    alert('충분히 핸드폰을 움직이지 않았습니다. 다시 시도해주세요.');
+                // 5mm 이상 움직였는지 확인
+                const minMovementMM = 5;
+                const estimatedHeightMM = yDifference * this.calibrationFactor;
+
+                if (estimatedHeightMM < minMovementMM) {
+                    alert(`최소 ${minMovementMM}mm 이상 핸드폰을 들어올려야 합니다. 다시 시도해주세요.`);
                     return;
                 }
 
@@ -962,8 +1017,8 @@
                 heightMM = Math.round(heightMM * 10) / 10;
 
                 // 최소값 설정
-                if (heightMM < 1) {
-                    heightMM = 0;
+                if (heightMM < minMovementMM) {
+                    heightMM = minMovementMM;
                 }
 
                 this.displayResult(heightMM);
@@ -984,14 +1039,19 @@
             updateDisplay() {
                 const resultValue = document.getElementById('resultValue').textContent;
                 if (resultValue !== '-' && resultValue !== '측정 중...') {
-                    const mmValue = parseFloat(resultValue);
-                    if (!isNaN(mmValue)) {
+                    const parts = resultValue.split(' ');
+                    const value = parseFloat(parts[0]);
+                    
+                    if (!isNaN(value)) {
+                        let newValue;
                         if (this.currentUnit === 'cm') {
-                            const cmValue = (mmValue * 10).toFixed(1);
-                            document.getElementById('resultValue').textContent = `${cmValue} cm`;
+                            // mm에서 cm으로 변환
+                            newValue = (value * 10 / 10).toFixed(1);
+                            document.getElementById('resultValue').textContent = `${newValue} cm`;
                         } else {
-                            const mm = (mmValue / 10).toFixed(1);
-                            document.getElementById('resultValue').textContent = `${mm} mm`;
+                            // cm에서 mm으로 변환
+                            newValue = (value * 10).toFixed(1);
+                            document.getElementById('resultValue').textContent = `${newValue} mm`;
                         }
                     }
                 }
