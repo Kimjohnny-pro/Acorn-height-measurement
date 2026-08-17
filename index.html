@@ -706,8 +706,16 @@
                 this.filteredAcceleration = { x: 0, y: 0, z: 0 };
                 this.lastTimestamp = 0;
 
+                // 시작 자세에서 자동으로 결정되는 수직 방향
+                this.referenceUp = { x: 0, y: 1, z: 0 };
+                this.gravityMagnitude = 9.81;
+
                 // 측정 시작 시점의 위치
                 this.startPosition = { x: 0, y: 0, z: 0 };
+
+                // 완료 순간의 센서 튐을 줄이기 위한 최근 샘플
+                this.recentHeightSamples = [];
+                this.maxSampleCount = 12;
 
                 // 캘리브레이션
                 this.calibrationHeight = 10;
@@ -945,7 +953,15 @@
                 const dx = this.position.x - this.startPosition.x;
                 const dy = this.position.y - this.startPosition.y;
                 const dz = this.position.z - this.startPosition.z;
-                const displacement = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                // 시작 자세에서 정한 수직 방향의 이동량만 계산한다.
+                // 따라서 옆으로 흔들거나 휴대폰 방향을 바꾸는 영향을 줄인다.
+                const verticalDisplacement =
+                    dx * this.referenceUp.x +
+                    dy * this.referenceUp.y +
+                    dz * this.referenceUp.z;
+
+                const displacement = Math.abs(verticalDisplacement);
 
                 if (this.isCalibratingNow) {
                     this.calibrationDisplacement = displacement;
@@ -957,6 +973,10 @@
                 }
 
                 if (this.isMeasuring) {
+                    this.recentHeightSamples.push(displacement);
+                    if (this.recentHeightSamples.length > this.maxSampleCount) {
+                        this.recentHeightSamples.shift();
+                    }
                     this.measurementDisplacement = displacement;
                     const estimatedHeight = displacement * this.calibrationFactor * 100;
                     document.getElementById('measYValue').textContent =
@@ -987,6 +1007,23 @@
 
                 // 시작 직전의 위치를 0점으로 잡는다.
                 this.startPosition = { x: 0, y: 0, z: 0 };
+
+                // 현재 중력의 반대 방향을 '위쪽'으로 정의한다.
+                const gx = this.gravity.x;
+                const gy = this.gravity.y;
+                const gz = this.gravity.z;
+                const gm = Math.sqrt(gx * gx + gy * gy + gz * gz);
+
+                if (gm > 7 && gm < 12) {
+                    this.gravityMagnitude = gm;
+                    this.referenceUp = {
+                        x: -gx / gm,
+                        y: -gy / gm,
+                        z: -gz / gm
+                    };
+                }
+
+                this.recentHeightSamples = [];
 
                 // 센서가 안정될 수 있도록 기준점을 몇 샘플 동안 유지하는 대신
                 // 현재의 위치/속도 상태를 0으로 강제한다.
@@ -1020,7 +1057,31 @@
                 const dx = this.position.x - this.startPosition.x;
                 const dy = this.position.y - this.startPosition.y;
                 const dz = this.position.z - this.startPosition.z;
-                return Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                return Math.abs(
+                    dx * this.referenceUp.x +
+                    dy * this.referenceUp.y +
+                    dz * this.referenceUp.z
+                );
+            }
+
+            getStableFinalDisplacement() {
+                const current = this.measureCurrentDisplacement();
+                this.recentHeightSamples.push(current);
+
+                if (this.recentHeightSamples.length > this.maxSampleCount) {
+                    this.recentHeightSamples.shift();
+                }
+
+                if (this.recentHeightSamples.length < 3) {
+                    return current;
+                }
+
+                const sorted = [...this.recentHeightSamples].sort((a, b) => a - b);
+                const trim = Math.floor(sorted.length * 0.2);
+                const stable = sorted.slice(trim, sorted.length - trim);
+
+                return stable.reduce((sum, v) => sum + v, 0) / stable.length;
             }
 
             calculateCalibrationFactor() {
@@ -1059,8 +1120,8 @@
             }
 
             endMeasurement() {
-                // 완료 버튼을 누른 순간의 위치를 마지막 위치로 확정한다.
-                const finalDisplacement = Math.abs(this.measureCurrentDisplacement());
+                // 완료 버튼 직전의 최근 여러 샘플을 이용해 최종 위치를 안정화한다.
+                const finalDisplacement = this.getStableFinalDisplacement();
 
                 this.isMeasuring = false;
                 this.measurementDisplacement = finalDisplacement;
@@ -1124,6 +1185,7 @@
                 this.isCalibratingNow = false;
                 this.isCalibrated = false;
                 this.measurementDisplacement = 0;
+                this.recentHeightSamples = [];
                 this.resetMotionState();
 
                 document.getElementById('resultValue').textContent = '-';
