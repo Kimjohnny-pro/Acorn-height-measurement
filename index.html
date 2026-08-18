@@ -687,49 +687,38 @@
                 this.isCalibratingNow = false;
                 this.sensorAvailable = false;
 
-                // 현재 가속도 (m/s²)
-                this.accelerationX = 0;
-                this.accelerationY = 0;
-                this.accelerationZ = 0;
+                // Raw sensor values
+                this.acc = { x: 0, y: 0, z: 0 };
+                this.accG = { x: 0, y: 0, z: 0 };
+                this.rate = { x: 0, y: 0, z: 0 };
 
-                // 중력 보정 후의 선형 가속도
-                this.linearX = 0;
-                this.linearY = 0;
-                this.linearZ = 0;
-
-                // 3축 속도/위치
-                this.velocity = { x: 0, y: 0, z: 0 };
-                this.position = { x: 0, y: 0, z: 0 };
-
-                // 필터 상태
+                // Gravity estimate in device coordinates
                 this.gravity = { x: 0, y: 0, z: 0 };
-                this.filteredAcceleration = { x: 0, y: 0, z: 0 };
+                this.gravityReady = false;
+
+                // Quaternion: device -> world
+                this.q = { w: 1, x: 0, y: 0, z: 0 };
+
+                // World-frame velocity and position.
+                // World Z is the vertical axis after initialization.
+                this.velocity = 0;
+                this.position = 0;
                 this.lastTimestamp = 0;
-                this.verticalAcceleration = 0;
-                this.verticalVelocity = 0;
-                this.verticalPosition = 0;
-                this.startVerticalPosition = 0;
-                this.biasVertical = 0;
-                this.stationarySince = 0;
 
-                // 시작 자세에서 자동으로 결정되는 수직 방향
-                this.referenceUp = { x: 0, y: 1, z: 0 };
-                this.gravityMagnitude = 9.81;
+                // Zero-velocity / stationary detection
+                this.stationaryTime = 0;
+                this.lastMovingTime = 0;
 
-                // 측정 시작 시점의 위치
-                this.startPosition = { x: 0, y: 0, z: 0 };
-
-                // 완료 순간의 센서 튐을 줄이기 위한 최근 샘플
-                this.recentHeightSamples = [];
-                this.maxSampleCount = 12;
-
-                // 캘리브레이션
-                this.calibrationHeight = 10;
+                // Reference height direction is fixed at measurement start.
                 this.calibrationDisplacement = 0;
                 this.calibrationFactor = 1;
 
+                this.startPosition = 0;
                 this.measurementDisplacement = 0;
                 this.measurementStartTime = 0;
+
+                this.recentHeightSamples = [];
+                this.maxSampleCount = 15;
 
                 this.setupEventListeners();
                 this.setupPermissionConfirm();
@@ -855,131 +844,247 @@
                 let sensorDetected = false;
 
                 const handleMotion = (event) => {
-                    const linear = event.acceleration;
-                    const gravity = event.accelerationIncludingGravity;
-                    const hasLinear = linear && [linear.x,linear.y,linear.z].every(Number.isFinite);
-                    const hasGravity = gravity && [gravity.x,gravity.y,gravity.z].every(Number.isFinite);
-                    if (!hasLinear && !hasGravity) return;
+                    const a = event.acceleration;
+                    const ag = event.accelerationIncludingGravity;
+                    const rr = event.rotationRate;
+
+                    if (!ag ||
+                        !Number.isFinite(ag.x) ||
+                        !Number.isFinite(ag.y) ||
+                        !Number.isFinite(ag.z)) return;
 
                     sensorDetected = true;
                     this.sensorAvailable = true;
 
-                    // iOS가 제공하는 '중력 제거 가속도'를 우선 사용한다.
-                    // 기존 코드처럼 accelerationIncludingGravity에서 빠른
-                    // 저역통과 필터로 중력을 빼면 느린 움직임까지 사라질 수 있다.
-                    if (hasLinear) {
-                        this.accelerationX = linear.x || 0;
-                        this.accelerationY = linear.y || 0;
-                        this.accelerationZ = linear.z || 0;
+                    this.accG = {
+                        x: ag.x || 0,
+                        y: ag.y || 0,
+                        z: ag.z || 0
+                    };
+
+                    if (a &&
+                        Number.isFinite(a.x) &&
+                        Number.isFinite(a.y) &&
+                        Number.isFinite(a.z)) {
+                        this.acc = {
+                            x: a.x || 0,
+                            y: a.y || 0,
+                            z: a.z || 0
+                        };
                     } else {
-                        // 구형/일부 환경의 fallback
-                        this.accelerationX = gravity.x || 0;
-                        this.accelerationY = gravity.y || 0;
-                        this.accelerationZ = gravity.z || 0;
+                        this.acc = {
+                            x: ag.x - this.gravity.x,
+                            y: ag.y - this.gravity.y,
+                            z: ag.z - this.gravity.z
+                        };
                     }
 
-                    // 현재 중력 방향으로부터 '위쪽' 방향을 계속 추정한다.
-                    // 휴대폰을 눕히거나 세워도 수직 이동을 같은 방식으로 계산한다.
-                    if (hasGravity) {
-                        const gx=gravity.x||0, gy=gravity.y||0, gz=gravity.z||0;
-                        const gm=Math.hypot(gx,gy,gz);
-                        if (gm>7 && gm<12) {
-                            const up={x:-gx/gm,y:-gy/gm,z:-gz/gm};
-                            const b=0.08;
-                            this.referenceUp.x=this.referenceUp.x*(1-b)+up.x*b;
-                            this.referenceUp.y=this.referenceUp.y*(1-b)+up.y*b;
-                            this.referenceUp.z=this.referenceUp.z*(1-b)+up.z*b;
-                            const n=Math.hypot(this.referenceUp.x,this.referenceUp.y,this.referenceUp.z);
-                            if(n){this.referenceUp.x/=n;this.referenceUp.y/=n;this.referenceUp.z/=n;}
-                        }
+                    if (rr) {
+                        this.rate = {
+                            x: (rr.alpha || 0) * Math.PI / 180,
+                            y: (rr.beta || 0) * Math.PI / 180,
+                            z: (rr.gamma || 0) * Math.PI / 180
+                        };
                     }
+
+                    this.updateGravityEstimate(this.accG, event.timeStamp);
+                    this.updateOrientation(event.timeStamp);
+                    this.integrateVerticalMotion(event.timeStamp);
 
                     if (sensorStatus.classList.contains('waiting')) {
-                        sensorStatus.textContent='✓ 센서 준비 완료';
-                        sensorStatus.classList.remove('error','waiting');
+                        sensorStatus.textContent = '✓ 센서 준비 완료';
+                        sensorStatus.classList.remove('error', 'waiting');
                         sensorStatus.classList.add('ok');
                         this.enableCalibration();
                     }
-                    this.integrateMotion(event.timeStamp);
                 };
 
-                window.addEventListener('devicemotion',handleMotion,false);
-                setTimeout(()=>{if(!sensorDetected)this.showSensorError();},4000);
+                window.addEventListener('devicemotion', handleMotion, false);
+
+                setTimeout(() => {
+                    if (!sensorDetected) this.showSensorError();
+                }, 3000);
             }
 
-            resetMotionState() {
-                this.velocity={x:0,y:0,z:0};
-                this.position={x:0,y:0,z:0};
-                this.filteredAcceleration={x:0,y:0,z:0};
-                this.lastTimestamp=0;
-                this.verticalAcceleration=0;
-                this.verticalVelocity=0;
-                this.verticalPosition=0;
-                this.startVerticalPosition=0;
-                this.biasVertical=0;
-                this.stationarySince=0;
+            updateGravityEstimate(ag, timestamp) {
+                // A low-pass gravity estimate is used only to correct slow drift.
+                // During rapid movement the raw gravity direction is not allowed
+                // to dominate the estimate.
+                const gmag = Math.sqrt(ag.x * ag.x + ag.y * ag.y + ag.z * ag.z);
+                if (gmag < 7 || gmag > 12) return;
+
+                const alpha = this.gravityReady ? 0.985 : 0.75;
+
+                this.gravity.x = alpha * this.gravity.x + (1 - alpha) * ag.x;
+                this.gravity.y = alpha * this.gravity.y + (1 - alpha) * ag.y;
+                this.gravity.z = alpha * this.gravity.z + (1 - alpha) * ag.z;
+                this.gravityReady = true;
             }
 
-            integrateMotion(timestamp) {
-                if(!this.isCalibratingNow && !this.isMeasuring)return;
-                const now=timestamp||performance.now();
-                if(!this.lastTimestamp){this.lastTimestamp=now;return;}
-                const dt=(now-this.lastTimestamp)/1000;
-                this.lastTimestamp=now;
-                if(!Number.isFinite(dt)||dt<=0||dt>0.04)return;
-
-                // 현재 가속도를 수직축으로 투영한다.
-                const raw=this.accelerationX*this.referenceUp.x+
-                          this.accelerationY*this.referenceUp.y+
-                          this.accelerationZ*this.referenceUp.z;
-
-                // 노이즈만 부드럽게 하고 느린 실제 움직임은 보존한다.
-                const s=0.35;
-                this.verticalAcceleration=this.verticalAcceleration*(1-s)+raw*s;
-
-                const absA=Math.abs(this.verticalAcceleration);
-                const likelyStill=absA<0.10;
-                if(likelyStill){
-                    if(!this.stationarySince)this.stationarySince=now;
-                }else{
-                    this.stationarySince=0;
+            // Integrate gyro orientation, then softly correct the gravity direction.
+            // This lets the vertical axis follow the phone even when it is rotated
+            // from flat to upright during a measurement.
+            updateOrientation(timestamp) {
+                if (!this.lastOrientationTime) {
+                    this.lastOrientationTime = timestamp || performance.now();
+                    return;
                 }
 
-                // 실제로 정지한 뒤에만 속도를 0으로 보정한다(ZUPT).
-                // 느리게 움직이는 중에는 속도를 강제로 0으로 만들지 않는다.
-                if(likelyStill && this.stationarySince && now-this.stationarySince>300){
-                    this.verticalVelocity*=0.18;
-                    if(Math.abs(this.verticalVelocity)<0.015)this.verticalVelocity=0;
+                let dt = ((timestamp || performance.now()) - this.lastOrientationTime) / 1000;
+                this.lastOrientationTime = timestamp || performance.now();
+
+                if (!Number.isFinite(dt) || dt <= 0 || dt > 0.08) return;
+
+                const wx = this.rate.x, wy = this.rate.y, wz = this.rate.z;
+                const q = this.q;
+
+                const half = 0.5 * dt;
+                const nw = q.w + (-q.x * wx - q.y * wy - q.z * wz) * half;
+                const nx = q.x + ( q.w * wx + q.y * wz - q.z * wy) * half;
+                const ny = q.y + ( q.w * wy - q.x * wz + q.z * wx) * half;
+                const nz = q.z + ( q.w * wz + q.x * wy - q.y * wx) * half;
+
+                const n = Math.sqrt(nw*nw + nx*nx + ny*ny + nz*nz) || 1;
+                q.w = nw / n;
+                q.x = nx / n;
+                q.y = ny / n;
+                q.z = nz / n;
+
+                if (this.gravityReady) {
+                    // Desired world-up expressed in device coordinates.
+                    const gm = Math.sqrt(
+                        this.gravity.x*this.gravity.x +
+                        this.gravity.y*this.gravity.y +
+                        this.gravity.z*this.gravity.z
+                    );
+
+                    if (gm > 7 && gm < 12) {
+                        const gx = -this.gravity.x / gm;
+                        const gy = -this.gravity.y / gm;
+                        const gz = -this.gravity.z / gm;
+
+                        // Device up vector from current quaternion.
+                        const ux = 2 * (q.x*q.z + q.w*q.y);
+                        const uy = 2 * (q.y*q.z - q.w*q.x);
+                        const uz = 1 - 2 * (q.x*q.x + q.y*q.y);
+
+                        // Small complementary correction.
+                        const ex = gy*uz - gz*uy;
+                        const ey = gz*ux - gx*uz;
+                        const ez = gx*uy - gy*ux;
+
+                        const k = 0.035;
+                        q.x += k * ex;
+                        q.y += k * ey;
+                        q.z += k * ez;
+
+                        const nn = Math.sqrt(q.w*q.w + q.x*q.x + q.y*q.y + q.z*q.z) || 1;
+                        q.w /= nn; q.x /= nn; q.y /= nn; q.z /= nn;
+                    }
+                }
+            }
+
+            // Convert device acceleration to world coordinates and use only
+            // the world vertical component.
+            getWorldVerticalAcceleration() {
+                const x = this.acc.x, y = this.acc.y, z = this.acc.z;
+                const q = this.q;
+
+                // Rotate vector by quaternion q.
+                const tx = 2 * (q.y * z - q.z * y);
+                const ty = 2 * (q.z * x - q.x * z);
+                const tz = 2 * (q.x * y - q.y * x);
+
+                const wx = x + q.w * tx + (q.y * tz - q.z * ty);
+                const wy = y + q.w * ty + (q.z * tx - q.x * tz);
+                const wz = z + q.w * tz + (q.x * ty - q.y * tx);
+
+                // World Z is vertical in this application.
+                return wz;
+            }
+
+            integrateVerticalMotion(timestamp) {
+                if (!this.isCalibratingNow && !this.isMeasuring) return;
+
+                if (!this.lastTimestamp) {
+                    this.lastTimestamp = timestamp || performance.now();
+                    this.lastMovingTime = this.lastTimestamp;
+                    return;
                 }
 
-                // 정지 상태가 0.7초 이상 지속될 때만 센서 bias를 학습한다.
-                if(likelyStill && this.stationarySince && now-this.stationarySince>700){
-                    this.biasVertical=this.biasVertical*0.985+this.verticalAcceleration*0.015;
+                let dt = ((timestamp || performance.now()) - this.lastTimestamp) / 1000;
+                this.lastTimestamp = timestamp || performance.now();
+
+                if (!Number.isFinite(dt) || dt <= 0 || dt > 0.06) return;
+
+                let az = this.getWorldVerticalAcceleration();
+
+                // Small noise deadband. The threshold is deliberately low enough
+                // to retain slow movement.
+                if (Math.abs(az) < 0.055) az = 0;
+
+                // Adaptive damping: do not erase slow motion, but remove velocity
+                // when the phone is genuinely stationary.
+                const gyroMagnitude = Math.sqrt(
+                    this.rate.x*this.rate.x +
+                    this.rate.y*this.rate.y +
+                    this.rate.z*this.rate.z
+                );
+
+                const accelMagnitude = Math.sqrt(
+                    this.acc.x*this.acc.x +
+                    this.acc.y*this.acc.y +
+                    this.acc.z*this.acc.z
+                );
+
+                const isStationary =
+                    Math.abs(az) < 0.075 &&
+                    gyroMagnitude < 0.055 &&
+                    accelMagnitude < 0.18;
+
+                if (isStationary) {
+                    this.stationaryTime += dt;
+
+                    if (this.stationaryTime > 0.18) {
+                        // ZUPT: zero velocity only after a real stationary interval.
+                        this.velocity = 0;
+                    }
+                } else {
+                    this.stationaryTime = 0;
+                    this.lastMovingTime = timestamp || performance.now();
                 }
 
-                const corrected=this.verticalAcceleration-this.biasVertical;
-                this.verticalVelocity+=corrected*dt;
-                this.verticalPosition+=this.verticalVelocity*dt;
+                // Trapezoidal integration is more stable than simple Euler
+                // integration for slow, smooth movement.
+                const previousVelocity = this.velocity;
+                this.velocity += az * dt;
 
-                if(likelyStill && now-this.stationarySince>400 && Math.abs(this.verticalVelocity)<0.04){
-                    this.verticalVelocity=0;
+                // Soft velocity limiting prevents a single sensor spike from
+                // creating a huge position jump.
+                if (this.velocity > 4) this.velocity = 4;
+                if (this.velocity < -4) this.velocity = -4;
+
+                this.position += (previousVelocity + this.velocity) * 0.5 * dt;
+
+                const displacement = Math.abs(this.position - this.startPosition);
+
+                if (this.isCalibratingNow) {
+                    this.calibrationDisplacement = displacement;
+                    const estimatedHeight = displacement * this.calibrationFactor * 100;
+                    document.getElementById('calibYValue').textContent = displacement.toFixed(3);
+                    document.getElementById('calibHeightValue').textContent = estimatedHeight.toFixed(1);
                 }
 
-                const displacement=Math.abs(this.verticalPosition-this.startVerticalPosition);
-
-                if(this.isCalibratingNow){
-                    this.calibrationDisplacement=displacement;
-                    const h=displacement*this.calibrationFactor*100;
-                    document.getElementById('calibYValue').textContent=displacement.toFixed(3);
-                    document.getElementById('calibHeightValue').textContent=h.toFixed(1);
-                }
-                if(this.isMeasuring){
+                if (this.isMeasuring) {
                     this.recentHeightSamples.push(displacement);
-                    if(this.recentHeightSamples.length>this.maxSampleCount)this.recentHeightSamples.shift();
-                    this.measurementDisplacement=displacement;
-                    const h=displacement*this.calibrationFactor*100;
-                    document.getElementById('measYValue').textContent=displacement.toFixed(3);
-                    document.getElementById('measHeightValue').textContent=h.toFixed(1);
+                    if (this.recentHeightSamples.length > this.maxSampleCount) {
+                        this.recentHeightSamples.shift();
+                    }
+
+                    this.measurementDisplacement = displacement;
+                    const estimatedHeight = displacement * this.calibrationFactor * 100;
+                    document.getElementById('measYValue').textContent = displacement.toFixed(3);
+                    document.getElementById('measHeightValue').textContent = estimatedHeight.toFixed(1);
                 }
             }
 
@@ -999,21 +1104,21 @@
                 document.getElementById('startCalibrationBtn').disabled = false;
             }
 
+            resetMotionState() {
+                this.velocity = 0;
+                this.position = 0;
+                this.startPosition = 0;
+                this.lastTimestamp = 0;
+                this.lastOrientationTime = 0;
+                this.stationaryTime = 0;
+                this.recentHeightSamples = [];
+                this.q = { w: 1, x: 0, y: 0, z: 0 };
+            }
+
             prepareReferencePoint() {
                 this.resetMotionState();
-                const gx=this.gravity.x,gy=this.gravity.y,gz=this.gravity.z;
-                const gm=Math.hypot(gx,gy,gz);
-                if(gm>7&&gm<12){
-                    this.referenceUp={x:-gx/gm,y:-gy/gm,z:-gz/gm};
-                }
-                this.startPosition={x:0,y:0,z:0};
-                this.startVerticalPosition=0;
-                this.verticalPosition=0;
-                this.verticalVelocity=0;
-                this.verticalAcceleration=0;
-                this.biasVertical=0;
-                this.recentHeightSamples=[];
-                this.lastTimestamp=0;
+                this.startPosition = 0;
+                this.measurementDisplacement = 0;
             }
 
             startCalibration() {
@@ -1024,35 +1129,19 @@
 
                 this.prepareReferencePoint();
                 this.isCalibratingNow = true;
-
                 document.getElementById('calibrationInProgressModal').classList.add('show');
             }
 
             completeCalibration() {
                 this.isCalibratingNow = false;
-                this.calibrationDisplacement = this.getStableFinalDisplacement();
+                this.calibrationDisplacement = Math.abs(this.position - this.startPosition);
 
                 document.getElementById('calibrationInProgressModal').classList.remove('show');
-
                 this.calculateCalibrationFactor();
-            }
-
-            measureCurrentDisplacement() {
-                return Math.abs(this.verticalPosition-this.startVerticalPosition);
-            }
-
-            getStableFinalDisplacement() {
-                const current=this.measureCurrentDisplacement();
-                this.recentHeightSamples.push(current);
-                if(this.recentHeightSamples.length>this.maxSampleCount)this.recentHeightSamples.shift();
-                if(this.recentHeightSamples.length<5)return current;
-                const a=[...this.recentHeightSamples].sort((x,y)=>x-y);
-                return a[Math.floor(a.length/2)];
             }
 
             calculateCalibrationFactor() {
                 if (this.calibrationDisplacement > 0.01) {
-                    // 센서 이동거리(m) -> 실제 높이(cm)
                     this.calibrationFactor =
                         this.calibrationHeight / (this.calibrationDisplacement * 100);
 
@@ -1072,9 +1161,8 @@
                     return;
                 }
 
-                // ★ 핵심:
-                // 측정 시작 순간을 새로운 0점으로 만든다.
-                // 이후 위로 갔다가 다시 내려와도 "시작점 대비 현재 위치"만 계산한다.
+                // 측정 시작점 = 0.
+                // 중간에 더 높이 올라갔다 내려와도 최종 위치만 사용한다.
                 this.prepareReferencePoint();
                 this.isMeasuring = true;
                 this.measurementDisplacement = 0;
@@ -1086,11 +1174,17 @@
             }
 
             endMeasurement() {
-                // 완료 버튼 직전의 최근 여러 샘플을 이용해 최종 위치를 안정화한다.
-                const finalDisplacement = this.getStableFinalDisplacement();
+                // 완료 직전 최근 샘플의 중앙값을 사용한다.
+                const values = this.recentHeightSamples.length
+                    ? [...this.recentHeightSamples]
+                    : [Math.abs(this.position - this.startPosition)];
+
+                values.sort((a, b) => a - b);
+
+                const median = values[Math.floor(values.length / 2)];
 
                 this.isMeasuring = false;
-                this.measurementDisplacement = finalDisplacement;
+                this.measurementDisplacement = median;
 
                 document.getElementById('measurementInProgressModal').classList.remove('show');
                 document.getElementById('toggleMeasurementBtn').textContent = '측정 시작';
@@ -1105,8 +1199,8 @@
                     return;
                 }
 
-                // calibrationFactor: 실제 높이(cm) / 센서 이동거리(m)
-                let heightCM = this.measurementDisplacement * 100 * this.calibrationFactor;
+                let heightCM =
+                    this.measurementDisplacement * 100 * this.calibrationFactor;
 
                 heightCM = Math.max(0.1, heightCM);
                 this.displayResult(heightCM);
@@ -1124,7 +1218,7 @@
                 document.getElementById('resultValue').textContent =
                     `${displayValue} ${this.currentUnit}`;
                 document.getElementById('statusText').textContent =
-                    '측정 완료! (시작점 ↔ 완료점)';
+                    '측정 완료! (센서 융합 / 시작점 ↔ 완료점)';
             }
 
             updateDisplay() {
@@ -1151,7 +1245,6 @@
                 this.isCalibratingNow = false;
                 this.isCalibrated = false;
                 this.measurementDisplacement = 0;
-                this.recentHeightSamples = [];
                 this.resetMotionState();
 
                 document.getElementById('resultValue').textContent = '-';
