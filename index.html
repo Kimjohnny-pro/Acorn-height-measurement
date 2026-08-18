@@ -1,17 +1,7 @@
-<!DOCTYPE html>
+\<!DOCTYPE html>
+\<html lang="ko"> \<head>     \<meta charset="UTF-8">     \<meta name="viewport" content="width=device-width, initial-scale=1.0">     \<title>높이 측정기\</title>     \<style>         \* {             margin: 0;             padding: 0;             box-sizing: border-box;         }
 
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>높이 측정기</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+```
     body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -416,13 +406,11 @@
         }
     }
 </style>
+```
 
-</head>
-<body>
-    <div class="container">
-        <h1>📏 높이 측정기</h1>
-        <p class="subtitle">센서 기반 정밀 높이 측정</p>
+\</head> \<body>     \<div class="container">         \<h1>📏 높이 측정기\</h1>         \<p class="subtitle">센서 기반 정밀 높이 측정\</p>
 
+```
     <!-- 센서 상태 -->
     <div class="sensor-status waiting" id="sensorStatus">
         센서 초기화 중...
@@ -714,6 +702,7 @@
             // Zero-velocity / stationary detection
             this.stationaryTime = 0;
             this.lastMovingTime = 0;
+            this.motionCandidate = { sign: 0, time: 0 };
 
             // Reference height direction is fixed at measurement start.
             this.calibrationDisplacement = 0;
@@ -1067,7 +1056,8 @@
 
             // 작은 노이즈는 0으로 처리하되, 느린 움직임을 잡아낼 수 있도록
             // 너무 높은 threshold는 사용하지 않는다.
-            if (Math.abs(az) < 0.045) az = 0;
+            // 아주 작은 가속도는 손떨림/센서 노이즈로 처리
+            if (Math.abs(az) < 0.10) az = 0;
 
             const gyroMagnitude = Math.sqrt(
                 this.rate.x*this.rate.x +
@@ -1082,9 +1072,9 @@
             );
 
             const stationary =
-                Math.abs(az) < 0.065 &&
-                gyroMagnitude < 0.08 &&
-                accelMagnitude < 0.16;
+                Math.abs(az) < 0.12 &&
+                gyroMagnitude < 0.12 &&
+                accelMagnitude < 0.22;
 
             if (stationary) {
                 this.stationaryTime += dt;
@@ -1101,9 +1091,37 @@
 
             const previousVelocity = this.velocity;
 
-            // 부호를 유지한다. abs()를 여기서 적용하면
-            // 올라갔다 내려올 때 모두 높이가 증가하는 문제가 생긴다.
-            this.velocity += az * dt;
+            // 짧은 미세 흔들림은 실제 이동으로 인정하지 않는다.
+            if (!this.motionCandidate) {
+                this.motionCandidate = { sign: 0, time: 0 };
+            }
+
+            const sign = Math.sign(az);
+            if (sign !== 0 && Math.abs(az) >= 0.055) {
+                if (this.motionCandidate.sign === sign) {
+                    this.motionCandidate.time += dt;
+                } else {
+                    this.motionCandidate.sign = sign;
+                    this.motionCandidate.time = dt;
+                }
+            } else {
+                this.motionCandidate.sign = 0;
+                this.motionCandidate.time = 0;
+            }
+
+            // 천천히 움직이는 경우도 잡기 위해 문턱은 낮추되,
+            // 아주 짧은 진동만 제거한다.
+            if (this.motionCandidate.time < 0.07) az = 0;
+
+            // 정지 상태에서는 속도를 즉시 0으로 수렴시킨다.
+            // 이것이 올라갔다가 내려온 뒤 잔류 속도 때문에
+            // 높이가 계속 증가하는 드리프트를 막는다.
+            if (stationary) {
+                this.velocity *= Math.max(0, 1 - 14 * dt);
+                if (Math.abs(this.velocity) < 0.006) this.velocity = 0;
+            } else {
+                this.velocity += az * dt;
+            }
 
             // 아주 작은 속도는 정지 상태로 수렴시키기
             if (Math.abs(this.velocity) < 0.012 && Math.abs(az) < 0.08) {
@@ -1171,8 +1189,8 @@
             this.lastTimestamp = 0;
             this.lastOrientationTime = 0;
             this.stationaryTime = 0;
+            this.motionCandidate = { sign: 0, time: 0 };
             this.recentHeightSamples = [];
-            this.stationaryTime = 0;
             this.q = { w: 1, x: 0, y: 0, z: 0 };
         }
 
@@ -1250,6 +1268,11 @@
             // 최종 결과는 시작점 대비 종료점의 높이 차이.
             // 중간 최고점은 결과에 누적하지 않는다.
             this.measurementDisplacement = Math.abs(median);
+
+            // 아주 작은 잔여 적분 오차는 손떨림/센서 노이즈로 처리
+            if (this.measurementDisplacement < 0.015) {
+                this.measurementDisplacement = 0;
+            }
 
             document.getElementById('measurementInProgressModal').classList.remove('show');
             document.getElementById('toggleMeasurementBtn').textContent = '측정 시작';
@@ -1359,6 +1382,6 @@
         app = new HeightMeasurement();
     });
 </script>
+```
 
-</body>
-</html>
+\</body> \</html>
