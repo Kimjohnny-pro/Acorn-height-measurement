@@ -1405,6 +1405,29 @@
     document.addEventListener('DOMContentLoaded', () => {
         app = new HeightMeasurement();
     });
+
+        document.getElementById('permissionConfirmBtn')?.addEventListener('click', async () => {
+            const modal = document.getElementById('permissionGuideModal');
+            const btn = document.getElementById('permissionConfirmBtn');
+
+            // Close the guide immediately so the UI can never get stuck here.
+            if (modal) modal.classList.remove('show');
+            if (btn) btn.disabled = true;
+
+            try {
+                if (app && typeof app.requestSensorPermission === 'function') {
+                    await app.requestSensorPermission();
+                }
+            } catch (e) {
+                console.warn('Sensor permission request:', e);
+            } finally {
+                if (btn) btn.disabled = false;
+                if (app && typeof app.setupSensors === 'function') {
+                    app.setupSensors();
+                }
+            }
+        });
+
 </script>
 ```
 
