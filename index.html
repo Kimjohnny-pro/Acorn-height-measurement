@@ -447,7 +447,7 @@
                 <div class="unit-display" id="calibrationUnitDisplay">cm</div>
             </div>
             <div class="button-group">
-                <button class="btn btn-primary" id="startCalibrationBtn" disabled>캘리브레이션 시작</button>
+                <button class="btn btn-primary" id="startCalibrationBtn">캘리브레이션 시작</button>
             </div>
         </div>
 
@@ -470,59 +470,6 @@
 
         <div class="footer">
             오차범위: ±5% | iPhone Safari 전용
-        </div>
-    </div>
-
-    <!-- 권한 안내 모달 (최초 실행) -->
-    <div class="modal show" id="permissionGuideModal">
-        <div class="modal-content">
-            <div class="modal-title">⚙️ 권한 설정 필요</div>
-            <div class="modal-text">
-                <p style="margin-bottom: 15px;">이 앱을 사용하려면 다음 권한을 허용해야 합니다:</p>
-                
-                <div class="step-guide">
-                    <div class="step-item">
-                        <strong>✓ 모션 & 피트니스 권한</strong>
-                        앱이 핸드폰의 기울기와 움직임을 감지하여 정확한 높이를 측정합니다.
-                    </div>
-                </div>
-
-                <p style="font-weight: 600; color: #333; margin: 20px 0;">📱 권한 설정 방법:</p>
-                
-                <div class="step-guide">
-                    <div class="step-item">
-                        <strong>1단계: 설정 앱 열기</strong>
-                        홈 화면에서 "설정" 앱을 탭합니다.
-                    </div>
-                    
-                    <div class="step-item">
-                        <strong>2단계: 개인정보 보호 메뉴</strong>
-                        아래로 스크롤하여 <code>개인정보 보호</code>를 탭합니다.
-                    </div>
-                    
-                    <div class="step-item">
-                        <strong>3단계: 모션 & 피트니스</strong>
-                        <code>개인정보 보호</code> 메뉴에서 <code>모션 & 피트니스</code>를 탭합니다.
-                    </div>
-                    
-                    <div class="step-item">
-                        <strong>4단계: Safari 허용</strong>
-                        <code>Safari</code> 또는 사용 중인 브라우저 옆의 토글을 ON으로 설정합니다.
-                    </div>
-                </div>
-
-                <div class="warning-box" style="margin-top: 20px;">
-                    <strong>⚠️ 권한을 허용하지 않으면:</strong><br>
-                    앱을 사용할 수 없으며, 센서를 감지하지 못한다는 오류가 발생합니다.
-                </div>
-
-                <p style="font-size: 12px; color: #999; margin-top: 15px;">
-                    위 과정을 완료한 후 아래 "확인" 버튼을 눌러주세요.
-                </p>
-            </div>
-            <div class="modal-buttons">
-                <button class="btn btn-primary" id="permissionConfirmBtn">확인했습니다</button>
-            </div>
         </div>
     </div>
 
@@ -725,14 +672,8 @@
                 this.maxSampleCount = 15;
 
                 this.setupEventListeners();
-                this.setupPermissionConfirm();
             }
-
-            setupPermissionConfirm() {
-                document.getElementById('permissionConfirmBtn').addEventListener('click', () => {
-                    document.getElementById('permissionGuideModal').classList.remove('show');
-                    this.requestSensorPermission();
-                });
+);
             }
 
             setupEventListeners() {
@@ -751,6 +692,10 @@
                 });
 
                 document.getElementById('startCalibrationBtn').addEventListener('click', () => {
+                    if (!this.sensorAvailable) {
+                        this.requestSensorPermission();
+                        return;
+                    }
                     const inputValue = parseFloat(document.getElementById('calibrationHeight').value) || 0;
                     this.calibrationHeight = this.currentUnit === 'cm'
                         ? inputValue
