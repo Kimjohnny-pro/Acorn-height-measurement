@@ -703,6 +703,9 @@
             this.stationaryTime = 0;
             this.lastMovingTime = 0;
             this.motionCandidate = { sign: 0, time: 0 };
+            this.filteredVerticalAcceleration = 0;
+            this.previousVerticalAcceleration = 0;
+            this.stationaryBiasVertical = 0;
 
             // Reference height direction is fixed at measurement start.
             this.calibrationDisplacement = 0;
@@ -716,14 +719,6 @@
             this.maxSampleCount = 15;
 
             this.setupEventListeners();
-            this.setupPermissionConfirm();
-        }
-
-        setupPermissionConfirm() {
-            document.getElementById('permissionConfirmBtn').addEventListener('click', () => {
-                document.getElementById('permissionGuideModal').classList.remove('show');
-                this.requestSensorPermission();
-            });
         }
 
         setupEventListeners() {
@@ -927,18 +922,40 @@
         }
 
         updateGravityEstimate(ag, timestamp) {
-            // A low-pass gravity estimate is used only to correct slow drift.
-            // During rapid movement the raw gravity direction is not allowed
-            // to dominate the estimate.
             const gmag = Math.sqrt(ag.x * ag.x + ag.y * ag.y + ag.z * ag.z);
             if (gmag < 7 || gmag > 12) return;
 
-            const alpha = this.gravityReady ? 0.985 : 0.75;
+            const linearMag = Math.sqrt(
+                this.acc.x*this.acc.x +
+                this.acc.y*this.acc.y +
+                this.acc.z*this.acc.z
+            );
+            const gyroMag = Math.sqrt(
+                this.rate.x*this.rate.x +
+                this.rate.y*this.rate.y +
+                this.rate.z*this.rate.z
+            );
+
+            // When the phone is mostly stationary, follow gravity quickly so that
+            // slow hand rotation does not turn a component of gravity into fake motion.
+            let alpha;
+            if (linearMag < 0.18 && gyroMag < 0.35) {
+                alpha = 0.90;
+            } else {
+                alpha = 0.985;
+            }
+
+            if (!this.gravityReady) {
+                this.gravity.x = ag.x;
+                this.gravity.y = ag.y;
+                this.gravity.z = ag.z;
+                this.gravityReady = true;
+                return;
+            }
 
             this.gravity.x = alpha * this.gravity.x + (1 - alpha) * ag.x;
             this.gravity.y = alpha * this.gravity.y + (1 - alpha) * ag.y;
             this.gravity.z = alpha * this.gravity.z + (1 - alpha) * ag.z;
-            this.gravityReady = true;
         }
 
         // Integrate gyro orientation, then softly correct the gravity direction.
@@ -1031,73 +1048,67 @@
                 return;
             }
 
-            let dt = ((timestamp || performance.now()) - this.lastTimestamp) / 1000;
-            this.lastTimestamp = timestamp || performance.now();
+            const now = timestamp || performance.now();
+            let dt = (now - this.lastTimestamp) / 1000;
+            this.lastTimestamp = now;
 
             if (!Number.isFinite(dt) || dt <= 0 || dt > 0.05) return;
 
-            // 현재 기기 좌표에서 중력 방향을 이용해 '수직 가속도'만 추출한다.
-            // 방향을 바꿔도 수직축을 따라 계산되도록 한다.
             const gm = Math.sqrt(
                 this.gravity.x*this.gravity.x +
                 this.gravity.y*this.gravity.y +
                 this.gravity.z*this.gravity.z
             );
-
             if (gm < 7 || gm > 12) return;
 
+            // Project linear acceleration onto the current gravity direction.
             const ux = this.gravity.x / gm;
             const uy = this.gravity.y / gm;
             const uz = this.gravity.z / gm;
 
-            // linear acceleration의 중력 방향 성분.
-            // 부호는 기기 좌표계에서 중력 방향을 기준으로 한다.
             let az = this.acc.x*ux + this.acc.y*uy + this.acc.z*uz;
-
-            // 작은 노이즈는 0으로 처리하되, 느린 움직임을 잡아낼 수 있도록
-            // 너무 높은 threshold는 사용하지 않는다.
-            // 아주 작은 가속도는 손떨림/센서 노이즈로 처리
-            if (Math.abs(az) < 0.10) az = 0;
 
             const gyroMagnitude = Math.sqrt(
                 this.rate.x*this.rate.x +
                 this.rate.y*this.rate.y +
                 this.rate.z*this.rate.z
             );
-
             const accelMagnitude = Math.sqrt(
                 this.acc.x*this.acc.x +
                 this.acc.y*this.acc.y +
                 this.acc.z*this.acc.z
             );
 
+            // Stationary detection is deliberately based on both acceleration and
+            // rotation. This prevents tiny hand tremors from accumulating.
             const stationary =
-                Math.abs(az) < 0.12 &&
-                gyroMagnitude < 0.12 &&
-                accelMagnitude < 0.22;
+                Math.abs(az) < 0.075 &&
+                gyroMagnitude < 0.16 &&
+                accelMagnitude < 0.20;
 
+            // Slowly adapt the vertical bias only while truly stationary.
+            // This removes the tiny DC offset that otherwise becomes large after
+            // double integration, without eating the signal during a movement.
             if (stationary) {
-                this.stationaryTime += dt;
-
-                // 정지한 뒤에는 속도뿐 아니라 위치 적분도 더 이상 진행하지 않는다.
-                // 이것이 '가만히 들고 있어도 높이가 계속 올라가는 현상'을 막는다.
-                if (this.stationaryTime > 0.16) {
-                    this.velocity = 0;
-                    az = 0;
-                }
-            } else {
-                this.stationaryTime = 0;
+                const biasAlpha = 1 - Math.exp(-dt / 1.2);
+                this.stationaryBiasVertical +=
+                    (az - this.stationaryBiasVertical) * biasAlpha;
             }
 
-            const previousVelocity = this.velocity;
+            az -= this.stationaryBiasVertical;
 
-            // 짧은 미세 흔들림은 실제 이동으로 인정하지 않는다.
+            // Small dead zone with a lower threshold than before, so slow lifting
+            // remains detectable.
+            if (Math.abs(az) < 0.028) az = 0;
+
+            // Short spikes are ignored, but a slow movement is accepted once it
+            // persists for a few frames.
             if (!this.motionCandidate) {
                 this.motionCandidate = { sign: 0, time: 0 };
             }
 
             const sign = Math.sign(az);
-            if (sign !== 0 && Math.abs(az) >= 0.055) {
+            if (sign !== 0 && Math.abs(az) >= 0.028) {
                 if (this.motionCandidate.sign === sign) {
                     this.motionCandidate.time += dt;
                 } else {
@@ -1109,32 +1120,47 @@
                 this.motionCandidate.time = 0;
             }
 
-            // 천천히 움직이는 경우도 잡기 위해 문턱은 낮추되,
-            // 아주 짧은 진동만 제거한다.
-            if (this.motionCandidate.time < 0.07) az = 0;
+            if (this.motionCandidate.time < 0.08) az = 0;
 
-            // 정지 상태에서는 속도를 즉시 0으로 수렴시킨다.
-            // 이것이 올라갔다가 내려온 뒤 잔류 속도 때문에
-            // 높이가 계속 증가하는 드리프트를 막는다.
+            // Light smoothing: enough to remove sensor spikes while retaining slow motion.
+            const smoothAlpha = 1 - Math.exp(-dt / 0.055);
+            this.previousVerticalAcceleration = this.filteredVerticalAcceleration;
+            this.filteredVerticalAcceleration +=
+                (az - this.filteredVerticalAcceleration) * smoothAlpha;
+            az = this.filteredVerticalAcceleration;
+
+            const previousVelocity = this.velocity;
+
             if (stationary) {
-                this.velocity *= Math.max(0, 1 - 14 * dt);
-                if (Math.abs(this.velocity) < 0.006) this.velocity = 0;
+                this.stationaryTime += dt;
+
+                // Zero-velocity update. Once stationary for a short period, there is
+                // no reason to keep integrating residual sensor noise.
+                if (this.stationaryTime > 0.12) {
+                    this.velocity = 0;
+                    az = 0;
+                    this.filteredVerticalAcceleration = 0;
+                    this.motionCandidate = { sign: 0, time: 0 };
+                } else {
+                    this.velocity *= Math.max(0, 1 - 10 * dt);
+                }
             } else {
+                this.stationaryTime = 0;
                 this.velocity += az * dt;
             }
 
-            // 아주 작은 속도는 정지 상태로 수렴시키기
-            if (Math.abs(this.velocity) < 0.012 && Math.abs(az) < 0.08) {
+            // Prevent tiny residual velocities from turning into position drift.
+            if (Math.abs(this.velocity) < 0.008 && Math.abs(az) < 0.045) {
                 this.velocity = 0;
             }
 
-            // 비정상적인 한 번의 센서 spike 제한
-            this.velocity = Math.max(-3, Math.min(3, this.velocity));
+            // Limit impossible spikes without clipping normal hand movement.
+            this.velocity = Math.max(-2.5, Math.min(2.5, this.velocity));
 
-            this.signedPosition += (previousVelocity + this.velocity) * 0.5 * dt;
+            // Trapezoidal integration is less noisy than simple Euler integration.
+            this.signedPosition +=
+                (previousVelocity + this.velocity) * 0.5 * dt;
 
-            // ★ 핵심: 여기서는 반드시 signed 값을 유지한다.
-            // 올라가면 한 방향으로 증가하고, 내려오면 다시 감소한다.
             const displacement = this.signedPosition - this.startPosition;
 
             if (this.isCalibratingNow) {
@@ -1165,18 +1191,6 @@
             }
         }
 
-        handlePermissionDenied() {
-            const sensorStatus = document.getElementById('sensorStatus');
-            sensorStatus.textContent = '✗ 센서 권한이 거부되었습니다';
-            sensorStatus.classList.remove('waiting', 'ok');
-            sensorStatus.classList.add('error');
-            this.showSensorError();
-        }
-
-        showSensorError() {
-            document.getElementById('sensorErrorModal').classList.add('show');
-        }
-
         enableCalibration() {
             document.getElementById('startCalibrationBtn').disabled = false;
         }
@@ -1190,6 +1204,9 @@
             this.lastOrientationTime = 0;
             this.stationaryTime = 0;
             this.motionCandidate = { sign: 0, time: 0 };
+            this.filteredVerticalAcceleration = 0;
+            this.previousVerticalAcceleration = 0;
+            this.stationaryBiasVertical = 0;
             this.recentHeightSamples = [];
             this.q = { w: 1, x: 0, y: 0, z: 0 };
         }
@@ -1262,7 +1279,14 @@
 
             values.sort((a, b) => a - b);
 
-            const median = values[Math.floor(values.length / 2)];
+            // Ignore the highest/lowest outliers caused by the last few sensor frames.
+            let stableValues = values;
+            if (values.length >= 7) {
+                const trim = Math.floor(values.length * 0.2);
+                stableValues = values.slice(trim, values.length - trim);
+            }
+
+            const median = stableValues[Math.floor(stableValues.length / 2)];
 
             this.isMeasuring = false;
             // 최종 결과는 시작점 대비 종료점의 높이 차이.
