@@ -415,59 +415,8 @@
             }
         }
     </style>
-
-
-
-
-<style id="permissionGateStyle">
-#permissionGuideModal {
-    position: fixed !important;
-    inset: 0 !important;
-    z-index: 99999 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    background: rgba(0,0,0,.45) !important;
-    padding: 20px !important;
-}
-#permissionGuideModal .permission-card {
-    display: block !important;
-    position: relative !important;
-    width: min(88vw, 420px) !important;
-    max-width: 420px !important;
-    height: auto !important;
-    background: #fff !important;
-    color: #333 !important;
-    border-radius: 20px !important;
-    padding: 28px !important;
-    box-sizing: border-box !important;
-    text-align: center !important;
-    box-shadow: 0 20px 60px rgba(0,0,0,.3) !important;
-}
-#permissionGuideModal .permission-card h2 {
-    color: #333 !important;
-    margin-bottom: 15px !important;
-}
-#permissionGuideModal .permission-card p {
-    color: #555 !important;
-    line-height: 1.6 !important;
-    margin-bottom: 12px !important;
-}
-body.permission-gated > .container {
-    visibility: hidden !important;
-}
-</style>
 </head>
-<body class="permission-gated">
-<div id="permissionGuideModal">
-    <div class="permission-card">
-        <h2>📱 모션 및 피트니스 권한 필요</h2>
-        <p>아래의 <strong>확인</strong> 버튼을 누르면 모션 및 피트니스 권한을 허용하거나 차단하는 화면이 뜹니다.</p>
-        <p>거기서 <strong>「허용」</strong>을 눌러야 프로그램이 실행됩니다.</p>
-        <button id="permissionConfirmBtn" class="btn btn-primary">확인</button>
-    </div>
-</div>
-
+<body>
     <div class="container">
         <h1>📏 높이 측정기</h1>
         <p class="subtitle">센서 기반 정밀 높이 측정</p>
@@ -525,7 +474,18 @@ body.permission-gated > .container {
     </div>
 
     <!-- 권한 안내 모달 (최초 실행) -->
-    
+    <div class="modal show" id="permissionGuideModal">
+        <div class="modal-content">
+            <div class="modal-title">⚙️ 권한 설정 필요</div>
+            <div class="modal-text">
+                <p style="margin-bottom: 15px;">이 앱을 사용하려면 다음 권한을 허용해야 합니다:</p>
+                
+                <div class="step-guide">
+                    <div class="step-item">
+                        <strong>✓ 모션 & 피트니스 권한</strong>
+                        앱이 핸드폰의 기울기와 움직임을 감지하여 정확한 높이를 측정합니다.
+                    </div>
+                </div>
 
                 <p style="font-weight: 600; color: #333; margin: 20px 0;">📱 권한 설정 방법:</p>
                 
@@ -770,9 +730,7 @@ body.permission-gated > .container {
 
             setupPermissionConfirm() {
                 document.getElementById('permissionConfirmBtn').addEventListener('click', () => {
-                    document.body.classList.remove('permission-gated');
-                    const guide = document.getElementById('permissionGuideModal');
-                    if (guide) guide.remove();
+                    document.getElementById('permissionGuideModal').classList.remove('show');
                     this.requestSensorPermission();
                 });
             }
@@ -1185,26 +1143,6 @@ body.permission-gated > .container {
                     document.getElementById('measHeightValue').textContent =
                         estimatedHeight.toFixed(1);
                 }
-            }
-
-            getStableDisplacement(value) {
-                this.recentHeightSamples.push(value);
-
-                if (this.recentHeightSamples.length > this.maxSampleCount) {
-                    this.recentHeightSamples.shift();
-                }
-
-                if (this.recentHeightSamples.length < 5) {
-                    return value;
-                }
-
-                // 최근 값 중 가장 작은/큰 일부를 버리고 평균을 내어
-                // 손떨림에 의한 순간적인 튐을 줄인다.
-                const sorted = [...this.recentHeightSamples].sort((a, b) => a - b);
-                const trim = Math.max(1, Math.floor(sorted.length * 0.2));
-                const stable = sorted.slice(trim, sorted.length - trim);
-
-                return stable.reduce((sum, v) => sum + v, 0) / stable.length;
             }
 
             handlePermissionDenied() {
