@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -11,1296 +12,1353 @@
             box-sizing: border-box;
         }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    }
 
+    .container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        padding: 40px;
+        max-width: 500px;
+        width: 100%;
+    }
+
+    h1 {
+        text-align: center;
+        color: #333;
+        margin-bottom: 10px;
+        font-size: 28px;
+    }
+
+    .subtitle {
+        text-align: center;
+        color: #666;
+        margin-bottom: 30px;
+        font-size: 14px;
+    }
+
+    .section {
+        margin-bottom: 30px;
+    }
+
+    .section-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 15px;
+    }
+
+    .unit-selector {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .unit-btn {
+        flex: 1;
+        padding: 12px;
+        border: 2px solid #ddd;
+        background: white;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+
+    .unit-btn.active {
+        border-color: #667eea;
+        background: #667eea;
+        color: white;
+    }
+
+    .unit-btn:hover {
+        border-color: #667eea;
+    }
+
+    .status-box {
+        background: #f5f5f5;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .status-label {
+        font-size: 12px;
+        color: #999;
+        margin-bottom: 8px;
+    }
+
+    .status-text {
+        font-size: 14px;
+        color: #666;
+        font-weight: 500;
+    }
+
+    .result-box {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        text-align: center;
+        color: white;
+    }
+
+    .result-label {
+        font-size: 12px;
+        opacity: 0.9;
+        margin-bottom: 8px;
+    }
+
+    .result-value {
+        font-size: 36px;
+        font-weight: bold;
+        font-family: 'Monaco', 'Courier New', monospace;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .btn {
+        flex: 1;
+        padding: 14px;
+        border: none;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+    .btn-primary {
+        background: #667eea;
+        color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        background: #5568d3;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-primary:active:not(:disabled) {
+        transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .btn-secondary {
+        background: #f0f0f0;
+        color: #333;
+        border: 2px solid #ddd;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+        background: #e8e8e8;
+        transform: translateY(-2px);
+    }
+
+    .btn-secondary:active:not(:disabled) {
+        transform: translateY(0);
+    }
+
+    .btn-secondary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .info-box {
+        background: #e3f2fd;
+        border-left: 4px solid #667eea;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+        font-size: 13px;
+        color: #1976d2;
+        line-height: 1.6;
+    }
+
+    .warning-box {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+        font-size: 13px;
+        color: #856404;
+        line-height: 1.6;
+    }
+
+    .error-box {
+        background: #f8d7da;
+        border-left: 4px solid #dc3545;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+        font-size: 13px;
+        color: #721c24;
+        line-height: 1.6;
+    }
+
+    .calibration-input-group {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .calibration-input {
+        flex: 1;
+        padding: 12px;
+        border: 2px solid #ddd;
+        border-radius: 10px;
+        font-size: 16px;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+    .calibration-input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .unit-display {
+        padding: 12px;
+        background: #f5f5f5;
+        border-radius: 10px;
+        border: 2px solid #ddd;
+        text-align: center;
+        font-weight: 600;
+        color: #333;
+        min-width: 60px;
+    }
+
+    .calibration-hint {
+        font-size: 12px;
+        color: #999;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+
+    .sensor-status {
+        font-size: 12px;
+        padding: 8px 12px;
+        background: #f0f0f0;
+        border-radius: 6px;
+        text-align: center;
+        margin-bottom: 10px;
+        word-break: break-word;
+    }
+
+    .sensor-status.ok {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .sensor-status.error {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .sensor-status.waiting {
+        background: #cfe2ff;
+        color: #084298;
+    }
+
+    .footer {
+        text-align: center;
+        font-size: 12px;
+        color: #999;
+        margin-top: 20px;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        overflow-y: auto;
+    }
+
+    .modal.show {
+        display: flex;
+    }
+
+    .modal-content {
+        background: white;
+        padding: 30px;
+        border-radius: 20px;
+        max-width: 400px;
+        width: 100%;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        max-height: 90vh;
+        overflow-y: auto;
+        margin: auto;
+    }
+
+    .modal-title {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #333;
+    }
+
+    .modal-text {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 20px;
+        line-height: 1.6;
+        text-align: left;
+    }
+
+    .modal-buttons {
+        display: flex;
+        gap: 10px;
+    }
+
+    .modal-buttons .btn {
+        flex: 1;
+    }
+
+    .step-guide {
+        background: #f9f9f9;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 15px 0;
+        text-align: left;
+    }
+
+    .step-item {
+        margin-bottom: 12px;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+    .step-item strong {
+        color: #667eea;
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    .step-item code {
+        background: #e8f0fe;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: 'Monaco', monospace;
+        color: #1967d2;
+    }
+
+    .sensor-data {
+        background: #f9f9f9;
+        border-radius: 8px;
+        padding: 10px;
+        margin: 10px 0;
+        font-size: 12px;
+        font-family: 'Monaco', monospace;
+        color: #333;
+        text-align: left;
+    }
+
+    .sensor-value {
+        margin: 3px 0;
+    }
+
+    @media (max-width: 480px) {
         .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            padding: 40px;
-            max-width: 500px;
-            width: 100%;
+            padding: 25px;
         }
 
         h1 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 28px;
-        }
-
-        .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-
-        .section {
-            margin-bottom: 30px;
-        }
-
-        .section-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 15px;
-        }
-
-        .unit-selector {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .unit-btn {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #ddd;
-            background: white;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            -webkit-user-select: none;
-            user-select: none;
-        }
-
-        .unit-btn.active {
-            border-color: #667eea;
-            background: #667eea;
-            color: white;
-        }
-
-        .unit-btn:hover {
-            border-color: #667eea;
-        }
-
-        .status-box {
-            background: #f5f5f5;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .status-label {
-            font-size: 12px;
-            color: #999;
-            margin-bottom: 8px;
-        }
-
-        .status-text {
-            font-size: 14px;
-            color: #666;
-            font-weight: 500;
-        }
-
-        .result-box {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-            text-align: center;
-            color: white;
-        }
-
-        .result-label {
-            font-size: 12px;
-            opacity: 0.9;
-            margin-bottom: 8px;
+            font-size: 24px;
         }
 
         .result-value {
-            font-size: 36px;
-            font-weight: bold;
-            font-family: 'Monaco', 'Courier New', monospace;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
+            font-size: 32px;
         }
 
         .btn {
-            flex: 1;
-            padding: 14px;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            -webkit-user-select: none;
-            user-select: none;
-            -webkit-appearance: none;
-            appearance: none;
-        }
-
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-
-        .btn-primary:hover:not(:disabled) {
-            background: #5568d3;
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn-primary:active:not(:disabled) {
-            transform: translateY(0);
-        }
-
-        .btn-primary:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-
-        .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
-            border: 2px solid #ddd;
-        }
-
-        .btn-secondary:hover:not(:disabled) {
-            background: #e8e8e8;
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary:active:not(:disabled) {
-            transform: translateY(0);
-        }
-
-        .btn-secondary:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .info-box {
-            background: #e3f2fd;
-            border-left: 4px solid #667eea;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            font-size: 13px;
-            color: #1976d2;
-            line-height: 1.6;
-        }
-
-        .warning-box {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            font-size: 13px;
-            color: #856404;
-            line-height: 1.6;
-        }
-
-        .error-box {
-            background: #f8d7da;
-            border-left: 4px solid #dc3545;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            font-size: 13px;
-            color: #721c24;
-            line-height: 1.6;
-        }
-
-        .calibration-input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .calibration-input {
-            flex: 1;
             padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            font-size: 16px;
-            -webkit-appearance: none;
-            appearance: none;
-        }
-
-        .calibration-input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .unit-display {
-            padding: 12px;
-            background: #f5f5f5;
-            border-radius: 10px;
-            border: 2px solid #ddd;
-            text-align: center;
-            font-weight: 600;
-            color: #333;
-            min-width: 60px;
-        }
-
-        .calibration-hint {
-            font-size: 12px;
-            color: #999;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
-        .sensor-status {
-            font-size: 12px;
-            padding: 8px 12px;
-            background: #f0f0f0;
-            border-radius: 6px;
-            text-align: center;
-            margin-bottom: 10px;
-            word-break: break-word;
-        }
-
-        .sensor-status.ok {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .sensor-status.error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .sensor-status.waiting {
-            background: #cfe2ff;
-            color: #084298;
-        }
-
-        .footer {
-            text-align: center;
-            font-size: 12px;
-            color: #999;
-            margin-top: 20px;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            overflow-y: auto;
-        }
-
-        .modal.show {
-            display: flex;
+            font-size: 14px;
         }
 
         .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            max-width: 400px;
-            width: 100%;
-            text-align: center;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-height: 90vh;
-            overflow-y: auto;
-            margin: auto;
+            padding: 20px;
         }
+    }
+</style>
 
-        .modal-title {
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: #333;
-        }
-
-        .modal-text {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 20px;
-            line-height: 1.6;
-            text-align: left;
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 10px;
-        }
-
-        .modal-buttons .btn {
-            flex: 1;
-        }
-
-        .step-guide {
-            background: #f9f9f9;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 15px 0;
-            text-align: left;
-        }
-
-        .step-item {
-            margin-bottom: 12px;
-            font-size: 13px;
-            line-height: 1.6;
-        }
-
-        .step-item strong {
-            color: #667eea;
-            display: block;
-            margin-bottom: 4px;
-        }
-
-        .step-item code {
-            background: #e8f0fe;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: 'Monaco', monospace;
-            color: #1967d2;
-        }
-
-        .sensor-data {
-            background: #f9f9f9;
-            border-radius: 8px;
-            padding: 10px;
-            margin: 10px 0;
-            font-size: 12px;
-            font-family: 'Monaco', monospace;
-            color: #333;
-            text-align: left;
-        }
-
-        .sensor-value {
-            margin: 3px 0;
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 25px;
-            }
-
-            h1 {
-                font-size: 24px;
-            }
-
-            .result-value {
-                font-size: 32px;
-            }
-
-            .btn {
-                padding: 12px;
-                font-size: 14px;
-            }
-
-            .modal-content {
-                padding: 20px;
-            }
-        }
-    </style>
 </head>
 <body>
     <div class="container">
         <h1>📏 높이 측정기</h1>
         <p class="subtitle">센서 기반 정밀 높이 측정</p>
 
-        <!-- 센서 상태 -->
-        <div class="sensor-status waiting" id="sensorStatus">
-            센서 초기화 중...
-        </div>
+    <!-- 센서 상태 -->
+    <div class="sensor-status waiting" id="sensorStatus">
+        센서 초기화 중...
+    </div>
 
-        <!-- 단위 선택 -->
-        <div class="section">
-            <div class="section-title">측정 단위</div>
-            <div class="unit-selector">
-                <button class="unit-btn active" data-unit="cm">센티미터 (cm)</button>
-                <button class="unit-btn" data-unit="mm">밀리미터 (mm)</button>
-            </div>
-        </div>
-
-        <!-- 캘리브레이션 섹션 -->
-        <div class="section" id="calibrationSection">
-            <div class="section-title">1단계: 캘리브레이션</div>
-            <div class="info-box">
-                🔧 정확한 측정을 위해 먼저 캘리브레이션을 진행합니다. 알려진 높이로 보정합니다.
-            </div>
-            <div class="calibration-hint" id="calibrationHint">캘리브레이션 높이를 입력하세요 (예: 10cm)</div>
-            <div class="calibration-input-group">
-                <input type="number" id="calibrationHeight" class="calibration-input" placeholder="높이 입력" value="10" min="0.5" step="0.5">
-                <div class="unit-display" id="calibrationUnitDisplay">cm</div>
-            </div>
-            <div class="button-group">
-                <button class="btn btn-primary" id="startCalibrationBtn">캘리브레이션 시작</button>
-            </div>
-        </div>
-
-        <!-- 측정 섹션 -->
-        <div class="section" id="measurementSection" style="display: none;">
-            <div class="section-title">2단계: 높이 측정</div>
-            <div class="result-box">
-                <div class="result-label">현재 측정값</div>
-                <div class="result-value" id="resultValue">-</div>
-            </div>
-            <div class="status-box">
-                <div class="status-label">상태</div>
-                <div class="status-text" id="statusText">준비됨</div>
-            </div>
-            <div class="button-group">
-                <button class="btn btn-primary" id="toggleMeasurementBtn">측정 시작</button>
-                <button class="btn btn-secondary" id="resetBtn">초기화</button>
-            </div>
-        </div>
-
-        <div class="footer">
-            오차범위: ±5% | iPhone Safari 전용
+    <!-- 단위 선택 -->
+    <div class="section">
+        <div class="section-title">측정 단위</div>
+        <div class="unit-selector">
+            <button class="unit-btn active" data-unit="cm">센티미터 (cm)</button>
+            <button class="unit-btn" data-unit="mm">밀리미터 (mm)</button>
         </div>
     </div>
 
-    <!-- 센서 감지 실패 모달 -->
-    <div class="modal" id="sensorErrorModal">
-        <div class="modal-content">
-            <div class="modal-title">❌ 센서 감지 실패</div>
-            <div class="modal-text">
-                <p style="margin-bottom: 15px;">센서를 감지하지 못했습니다. 다음을 확인해주세요:</p>
+    <!-- 캘리브레이션 섹션 -->
+    <div class="section" id="calibrationSection">
+        <div class="section-title">1단계: 캘리브레이션</div>
+        <div class="info-box">
+            🔧 정확한 측정을 위해 먼저 캘리브레이션을 진행합니다. 알려진 높이로 보정합니다.
+        </div>
+        <div class="calibration-hint" id="calibrationHint">캘리브레이션 높이를 입력하세요 (예: 10cm)</div>
+        <div class="calibration-input-group">
+            <input type="number" id="calibrationHeight" class="calibration-input" placeholder="높이 입력" value="10" min="0.5" step="0.5">
+            <div class="unit-display" id="calibrationUnitDisplay">cm</div>
+        </div>
+        <div class="button-group">
+            <button class="btn btn-primary" id="startCalibrationBtn" disabled>캘리브레이션 시작</button>
+        </div>
+    </div>
+
+    <!-- 측정 섹션 -->
+    <div class="section" id="measurementSection" style="display: none;">
+        <div class="section-title">2단계: 높이 측정</div>
+        <div class="result-box">
+            <div class="result-label">현재 측정값</div>
+            <div class="result-value" id="resultValue">-</div>
+        </div>
+        <div class="status-box">
+            <div class="status-label">상태</div>
+            <div class="status-text" id="statusText">준비됨</div>
+        </div>
+        <div class="button-group">
+            <button class="btn btn-primary" id="toggleMeasurementBtn">측정 시작</button>
+            <button class="btn btn-secondary" id="resetBtn">초기화</button>
+        </div>
+    </div>
+
+    <div class="footer">
+        오차범위: ±5% | iPhone Safari 전용
+    </div>
+</div>
+
+<!-- 권한 안내 모달 (최초 실행) -->
+<div class="modal show" id="permissionGuideModal">
+    <div class="modal-content">
+        <div class="modal-title">⚙️ 권한 설정 필요</div>
+        <div class="modal-text">
+            <p style="margin-bottom: 15px;">이 앱을 사용하려면 다음 권한을 허용해야 합니다:</p>
+            
+            <div class="step-guide">
+                <div class="step-item">
+                    <strong>✓ 모션 & 피트니스 권한</strong>
+                    앱이 핸드폰의 기울기와 움직임을 감지하여 정확한 높이를 측정합니다.
+                </div>
+            </div>
+
+            <p style="font-weight: 600; color: #333; margin: 20px 0;">📱 권한 설정 방법:</p>
+            
+            <div class="step-guide">
+                <div class="step-item">
+                    <strong>1단계: 설정 앱 열기</strong>
+                    홈 화면에서 "설정" 앱을 탭합니다.
+                </div>
                 
-                <div class="step-guide">
-                    <div class="step-item">
-                        <strong>1. 권한 확인</strong>
-                        설정 > 개인정보 보호 > 모션 & 피트니스에서 Safari가 허용되어 있는지 확인하세요.
-                    </div>
-                    
-                    <div class="step-item">
-                        <strong>2. Safari 재시작</strong>
-                        Safari를 완전히 종료하고 다시 열어주세요.
-                    </div>
-                    
-                    <div class="step-item">
-                        <strong>3. 페이지 새로고침</strong>
-                        화면을 아래로 당겨 새로고침 하거나, 주소창의 새로고침 버튼을 탭하세요.
-                    </div>
-                    
-                    <div class="step-item">
-                        <strong>4. iPhone 재시작</strong>
-                        iPhone을 재부팅해주세요. (전원 버튼 + 볼륨 버튼을 길게 눌러 종료)
-                    </div>
+                <div class="step-item">
+                    <strong>2단계: 개인정보 보호 메뉴</strong>
+                    아래로 스크롤하여 <code>개인정보 보호</code>를 탭합니다.
                 </div>
-
-                <div class="error-box" style="margin-top: 20px;">
-                    <strong>💡 팁:</strong><br>
-                    기기가 "모션" 센서를 지원해야 합니다. 대부분의 현대 iPhone이 지원하고 있습니다.
-                </div>
-            </div>
-            <div class="modal-buttons">
-                <button class="btn btn-primary" id="retryBtn">다시 시도</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 캘리브레이션 안내 모달 -->
-    <div class="modal" id="calibrationModal">
-        <div class="modal-content">
-            <div class="modal-title">📐 캘리브레이션 안내</div>
-            <div class="modal-text">
-                <strong>캘리브레이션은 정확한 측정을 위한 필수 과정입니다.</strong><br><br>
                 
-                <div class="step-guide">
-                    <div class="step-item">
-                        <strong>1단계:</strong> 핸드폰을 평탄한 곳에 정확히 <strong>수직</strong>으로 놓습니다.
-                    </div>
-                    
-                    <div class="step-item">
-                        <strong>2단계:</strong> 아래의 "시작" 버튼을 탭합니다.
-                    </div>
-                    
-                    <div class="step-item">
-                        <strong>3단계:</strong> 핸드폰을 입력한 높이만큼 <strong>천천히 일정하게</strong> 수직으로 들어올립니다. (기울이지 않기!)
-                    </div>
-                    
-                    <div class="step-item">
-                        <strong>4단계:</strong> "완료" 버튼을 탭합니다.
-                    </div>
+                <div class="step-item">
+                    <strong>3단계: 모션 & 피트니스</strong>
+                    <code>개인정보 보호</code> 메뉴에서 <code>모션 & 피트니스</code>를 탭합니다.
                 </div>
-
-                <div class="warning-box" style="margin-top: 20px;">
-                    <strong>⚠️ 주의:</strong><br>
-                    • 핸드폰을 기울이지 않도록 주의하세요<br>
-                    • 정확한 높이로 움직여야 정확한 측정이 가능합니다<br>
-                    • 부드럽고 일정한 속도로 올려주세요
-                </div>
-            </div>
-            <div class="modal-buttons">
-                <button class="btn btn-secondary" onclick="closeCalibrationModal()">취소</button>
-                <button class="btn btn-primary" id="confirmCalibrationBtn">시작</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 캘리브레이션 진행 중 모달 -->
-    <div class="modal" id="calibrationInProgressModal">
-        <div class="modal-content">
-            <div class="modal-title">📐 캘리브레이션 진행 중</div>
-            <div class="modal-text">
-                입력한 높이만큼 핸드폰을 들어올리고 있습니다...<br><br>
-                <strong>천천히 정확하게 들어올려 주세요.</strong><br><br>
-                <div class="sensor-data">
-                    <div class="sensor-value">Y축 이동: <span id="calibYValue">0.00</span>m</div>
-                    <div class="sensor-value">예상 높이: <span id="calibHeightValue">0.00</span>cm</div>
-                </div>
-            </div>
-            <div class="modal-buttons">
-                <button class="btn btn-primary" id="completeCalibrationBtn">완료</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 측정 안내 모달 -->
-    <div class="modal" id="measurementModal">
-        <div class="modal-content">
-            <div class="modal-title">📏 높이 측정 안내</div>
-            <div class="modal-text">
-                <strong>정확한 측정을 위해 다음 단계를 따라주세요:</strong><br><br>
                 
-                <div class="step-guide">
-                    <div class="step-item">
-                        <strong>1단계:</strong> 핸드폰을 측정할 대상의 하단에 놓습니다.
-                    </div>
-                    
-                    <div class="step-item">
-                        <strong>2단계:</strong> "시작" 버튼을 탭합니다.
-                    </div>
-                    
-                    <div class="step-item">
-                        <strong>3단계:</strong> 핸드폰을 대상의 상단까지 <strong>천천히 일정하게</strong> 수직으로 들어올립니다. (기울이지 않기!)
-                    </div>
-                    
-                    <div class="step-item">
-                        <strong>4단계:</strong> "완료" 버튼을 탭합니다.
-                    </div>
+                <div class="step-item">
+                    <strong>4단계: Safari 허용</strong>
+                    <code>Safari</code> 또는 사용 중인 브라우저 옆의 토글을 ON으로 설정합니다.
                 </div>
+            </div>
 
-                <div class="info-box" style="margin-top: 20px;">
-                    <strong>💡 팁:</strong><br>
-                    핸드폰을 기울이지 않고 정확히 수직으로 들어올릴수록 측정 오차가 줄어듭니다.
-                </div>
+            <div class="warning-box" style="margin-top: 20px;">
+                <strong>⚠️ 권한을 허용하지 않으면:</strong><br>
+                앱을 사용할 수 없으며, 센서를 감지하지 못한다는 오류가 발생합니다.
             </div>
-            <div class="modal-buttons">
-                <button class="btn btn-secondary" onclick="closeMeasurementModal()">취소</button>
-                <button class="btn btn-primary" id="confirmMeasurementBtn">시작</button>
-            </div>
+
+            <p style="font-size: 12px; color: #999; margin-top: 15px;">
+                위 과정을 완료한 후 아래 "확인" 버튼을 눌러주세요.
+            </p>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn btn-primary" id="permissionConfirmBtn">확인했습니다</button>
         </div>
     </div>
+</div>
 
-    <!-- 측정 진행 중 모달 -->
-    <div class="modal" id="measurementInProgressModal">
-        <div class="modal-content">
-            <div class="modal-title">📏 측정 진행 중</div>
-            <div class="modal-text">
-                핸드폰을 상단까지 들어올리고 있습니다...<br><br>
-                <strong>움직임을 멈추고 "완료"를 누르세요.</strong><br><br>
-                <div class="sensor-data">
-                    <div class="sensor-value">Y축 이동: <span id="measYValue">0.00</span>m</div>
-                    <div class="sensor-value">예상 높이: <span id="measHeightValue">0.00</span>cm</div>
+<!-- 센서 감지 실패 모달 -->
+<div class="modal" id="sensorErrorModal">
+    <div class="modal-content">
+        <div class="modal-title">❌ 센서 감지 실패</div>
+        <div class="modal-text">
+            <p style="margin-bottom: 15px;">센서를 감지하지 못했습니다. 다음을 확인해주세요:</p>
+            
+            <div class="step-guide">
+                <div class="step-item">
+                    <strong>1. 권한 확인</strong>
+                    설정 > 개인정보 보호 > 모션 & 피트니스에서 Safari가 허용되어 있는지 확인하세요.
+                </div>
+                
+                <div class="step-item">
+                    <strong>2. Safari 재시작</strong>
+                    Safari를 완전히 종료하고 다시 열어주세요.
+                </div>
+                
+                <div class="step-item">
+                    <strong>3. 페이지 새로고침</strong>
+                    화면을 아래로 당겨 새로고침 하거나, 주소창의 새로고침 버튼을 탭하세요.
+                </div>
+                
+                <div class="step-item">
+                    <strong>4. iPhone 재시작</strong>
+                    iPhone을 재부팅해주세요. (전원 버튼 + 볼륨 버튼을 길게 눌러 종료)
                 </div>
             </div>
-            <div class="modal-buttons">
-                <button class="btn btn-primary" id="completeMeasurementBtn">완료</button>
+
+            <div class="error-box" style="margin-top: 20px;">
+                <strong>💡 팁:</strong><br>
+                기기가 "모션" 센서를 지원해야 합니다. 대부분의 현대 iPhone이 지원하고 있습니다.
             </div>
         </div>
+        <div class="modal-buttons">
+            <button class="btn btn-primary" id="retryBtn">다시 시도</button>
+        </div>
     </div>
+</div>
 
-    <script>
-        class HeightMeasurement {
-            constructor() {
-                this.currentUnit = 'cm';
-                this.isCalibrated = false;
-                this.isMeasuring = false;
-                this.isCalibratingNow = false;
-                this.sensorAvailable = false;
+<!-- 캘리브레이션 안내 모달 -->
+<div class="modal" id="calibrationModal">
+    <div class="modal-content">
+        <div class="modal-title">📐 캘리브레이션 안내</div>
+        <div class="modal-text">
+            <strong>캘리브레이션은 정확한 측정을 위한 필수 과정입니다.</strong><br><br>
+            
+            <div class="step-guide">
+                <div class="step-item">
+                    <strong>1단계:</strong> 핸드폰을 평탄한 곳에 정확히 <strong>수직</strong>으로 놓습니다.
+                </div>
+                
+                <div class="step-item">
+                    <strong>2단계:</strong> 아래의 "시작" 버튼을 탭합니다.
+                </div>
+                
+                <div class="step-item">
+                    <strong>3단계:</strong> 핸드폰을 입력한 높이만큼 <strong>천천히 일정하게</strong> 수직으로 들어올립니다. (기울이지 않기!)
+                </div>
+                
+                <div class="step-item">
+                    <strong>4단계:</strong> "완료" 버튼을 탭합니다.
+                </div>
+            </div>
 
-                // Raw sensor values
-                this.acc = { x: 0, y: 0, z: 0 };
-                this.accG = { x: 0, y: 0, z: 0 };
-                this.rate = { x: 0, y: 0, z: 0 };
+            <div class="warning-box" style="margin-top: 20px;">
+                <strong>⚠️ 주의:</strong><br>
+                • 핸드폰을 기울이지 않도록 주의하세요<br>
+                • 정확한 높이로 움직여야 정확한 측정이 가능합니다<br>
+                • 부드럽고 일정한 속도로 올려주세요
+            </div>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn btn-secondary" onclick="closeCalibrationModal()">취소</button>
+            <button class="btn btn-primary" id="confirmCalibrationBtn">시작</button>
+        </div>
+    </div>
+</div>
 
-                // Gravity estimate in device coordinates
-                this.gravity = { x: 0, y: 0, z: 0 };
-                this.gravityReady = false;
-                this.accBias = { x: 0, y: 0, z: 0 };
-                this.biasReady = false;
-                this.stationarySamples = [];
-                this.signedPosition = 0;
+<!-- 캘리브레이션 진행 중 모달 -->
+<div class="modal" id="calibrationInProgressModal">
+    <div class="modal-content">
+        <div class="modal-title">📐 캘리브레이션 진행 중</div>
+        <div class="modal-text">
+            입력한 높이만큼 핸드폰을 들어올리고 있습니다...<br><br>
+            <strong>천천히 정확하게 들어올려 주세요.</strong><br><br>
+            <div class="sensor-data">
+                <div class="sensor-value">Y축 이동: <span id="calibYValue">0.00</span>m</div>
+                <div class="sensor-value">예상 높이: <span id="calibHeightValue">0.00</span>cm</div>
+            </div>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn btn-primary" id="completeCalibrationBtn">완료</button>
+        </div>
+    </div>
+</div>
 
-                // Quaternion: device -> world
-                this.q = { w: 1, x: 0, y: 0, z: 0 };
+<!-- 측정 안내 모달 -->
+<div class="modal" id="measurementModal">
+    <div class="modal-content">
+        <div class="modal-title">📏 높이 측정 안내</div>
+        <div class="modal-text">
+            <strong>정확한 측정을 위해 다음 단계를 따라주세요:</strong><br><br>
+            
+            <div class="step-guide">
+                <div class="step-item">
+                    <strong>1단계:</strong> 핸드폰을 측정할 대상의 하단에 놓습니다.
+                </div>
+                
+                <div class="step-item">
+                    <strong>2단계:</strong> "시작" 버튼을 탭합니다.
+                </div>
+                
+                <div class="step-item">
+                    <strong>3단계:</strong> 핸드폰을 대상의 상단까지 <strong>천천히 일정하게</strong> 수직으로 들어올립니다. (기울이지 않기!)
+                </div>
+                
+                <div class="step-item">
+                    <strong>4단계:</strong> "완료" 버튼을 탭합니다.
+                </div>
+            </div>
 
-                // World-frame velocity and position.
-                // World Z is the vertical axis after initialization.
-                this.velocity = 0;
-                this.position = 0;
-                this.lastTimestamp = 0;
+            <div class="info-box" style="margin-top: 20px;">
+                <strong>💡 팁:</strong><br>
+                핸드폰을 기울이지 않고 정확히 수직으로 들어올릴수록 측정 오차가 줄어듭니다.
+            </div>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn btn-secondary" onclick="closeMeasurementModal()">취소</button>
+            <button class="btn btn-primary" id="confirmMeasurementBtn">시작</button>
+        </div>
+    </div>
+</div>
 
-                // Zero-velocity / stationary detection
-                this.stationaryTime = 0;
-                this.lastMovingTime = 0;
+<!-- 측정 진행 중 모달 -->
+<div class="modal" id="measurementInProgressModal">
+    <div class="modal-content">
+        <div class="modal-title">📏 측정 진행 중</div>
+        <div class="modal-text">
+            핸드폰을 상단까지 들어올리고 있습니다...<br><br>
+            <strong>움직임을 멈추고 "완료"를 누르세요.</strong><br><br>
+            <div class="sensor-data">
+                <div class="sensor-value">Y축 이동: <span id="measYValue">0.00</span>m</div>
+                <div class="sensor-value">예상 높이: <span id="measHeightValue">0.00</span>cm</div>
+            </div>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn btn-primary" id="completeMeasurementBtn">완료</button>
+        </div>
+    </div>
+</div>
 
-                // Reference height direction is fixed at measurement start.
-                this.calibrationDisplacement = 0;
-                this.calibrationFactor = 1;
+<script>
+    class HeightMeasurement {
+        constructor() {
+            this.currentUnit = 'cm';
+            this.isCalibrated = false;
+            this.isMeasuring = false;
+            this.isCalibratingNow = false;
+            this.sensorAvailable = false;
 
-                this.startPosition = 0;
-                this.measurementDisplacement = 0;
-                this.measurementStartTime = 0;
+            // Raw sensor values
+            this.acc = { x: 0, y: 0, z: 0 };
+            this.accG = { x: 0, y: 0, z: 0 };
+            this.rate = { x: 0, y: 0, z: 0 };
 
-                this.recentHeightSamples = [];
-                this.maxSampleCount = 15;
+            // Gravity estimate in device coordinates
+            this.gravity = { x: 0, y: 0, z: 0 };
+            this.gravityReady = false;
+            this.accBias = { x: 0, y: 0, z: 0 };
+            this.biasReady = false;
+            this.stationarySamples = [];
+            this.signedPosition = 0;
 
-                this.setupEventListeners();
-            }
-);
-            }
+            // Quaternion: device -> world
+            this.q = { w: 1, x: 0, y: 0, z: 0 };
 
-            setupEventListeners() {
-                document.querySelectorAll('.unit-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        document.querySelectorAll('.unit-btn').forEach(b => b.classList.remove('active'));
-                        e.target.classList.add('active');
-                        this.currentUnit = e.target.dataset.unit;
-                        this.updateCalibrationUnit();
-                        this.updateDisplay();
-                    });
-                });
+            // World-frame velocity and position.
+            // World Z is the vertical axis after initialization.
+            this.velocity = 0;
+            this.position = 0;
+            this.lastTimestamp = 0;
 
-                document.getElementById('calibrationHeight').addEventListener('change', () => {
+            // Zero-velocity / stationary detection
+            this.stationaryTime = 0;
+            this.lastMovingTime = 0;
+
+            // Reference height direction is fixed at measurement start.
+            this.calibrationDisplacement = 0;
+            this.calibrationFactor = 1;
+
+            this.startPosition = 0;
+            this.measurementDisplacement = 0;
+            this.measurementStartTime = 0;
+
+            this.recentHeightSamples = [];
+            this.maxSampleCount = 15;
+
+            this.setupEventListeners();
+            this.setupPermissionConfirm();
+        }
+
+        setupPermissionConfirm() {
+            document.getElementById('permissionConfirmBtn').addEventListener('click', () => {
+                document.getElementById('permissionGuideModal').classList.remove('show');
+                this.requestSensorPermission();
+            });
+        }
+
+        setupEventListeners() {
+            document.querySelectorAll('.unit-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.unit-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    this.currentUnit = e.target.dataset.unit;
                     this.updateCalibrationUnit();
+                    this.updateDisplay();
                 });
+            });
 
-                document.getElementById('startCalibrationBtn').addEventListener('click', () => {
-                    if (!this.sensorAvailable) {
-                        this.requestSensorPermission();
-                        return;
-                    }
-                    const inputValue = parseFloat(document.getElementById('calibrationHeight').value) || 0;
-                    this.calibrationHeight = this.currentUnit === 'cm'
-                        ? inputValue
-                        : inputValue / 10;
-                    document.getElementById('calibrationModal').classList.add('show');
-                });
+            document.getElementById('calibrationHeight').addEventListener('change', () => {
+                this.updateCalibrationUnit();
+            });
 
-                document.getElementById('confirmCalibrationBtn').addEventListener('click', () => {
-                    closeCalibrationModal();
-                    this.startCalibration();
-                });
+            document.getElementById('startCalibrationBtn').addEventListener('click', () => {
+                const inputValue = parseFloat(document.getElementById('calibrationHeight').value) || 0;
+                this.calibrationHeight = this.currentUnit === 'cm'
+                    ? inputValue
+                    : inputValue / 10;
+                document.getElementById('calibrationModal').classList.add('show');
+            });
 
-                document.getElementById('completeCalibrationBtn').addEventListener('click', () => {
-                    this.completeCalibration();
-                });
+            document.getElementById('confirmCalibrationBtn').addEventListener('click', () => {
+                closeCalibrationModal();
+                this.startCalibration();
+            });
 
-                document.getElementById('toggleMeasurementBtn').addEventListener('click', () => {
-                    if (!this.isMeasuring) {
-                        document.getElementById('measurementModal').classList.add('show');
-                    } else {
-                        this.endMeasurement();
-                    }
-                });
+            document.getElementById('completeCalibrationBtn').addEventListener('click', () => {
+                this.completeCalibration();
+            });
 
-                document.getElementById('confirmMeasurementBtn').addEventListener('click', () => {
-                    closeMeasurementModal();
-                    this.startMeasurement();
-                });
-
-                document.getElementById('completeMeasurementBtn').addEventListener('click', () => {
+            document.getElementById('toggleMeasurementBtn').addEventListener('click', () => {
+                if (!this.isMeasuring) {
+                    document.getElementById('measurementModal').classList.add('show');
+                } else {
                     this.endMeasurement();
-                });
+                }
+            });
 
-                document.getElementById('resetBtn').addEventListener('click', () => {
-                    this.reset();
-                });
+            document.getElementById('confirmMeasurementBtn').addEventListener('click', () => {
+                closeMeasurementModal();
+                this.startMeasurement();
+            });
 
-                document.getElementById('retryBtn').addEventListener('click', () => {
-                    document.getElementById('sensorErrorModal').classList.remove('show');
-                    this.requestSensorPermission();
-                });
+            document.getElementById('completeMeasurementBtn').addEventListener('click', () => {
+                this.endMeasurement();
+            });
+
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                this.reset();
+            });
+
+            document.getElementById('retryBtn').addEventListener('click', () => {
+                document.getElementById('sensorErrorModal').classList.remove('show');
+                this.requestSensorPermission();
+            });
+        }
+
+        updateCalibrationUnit() {
+            const unitDisplay = document.getElementById('calibrationUnitDisplay');
+            const hint = document.getElementById('calibrationHint');
+
+            if (this.currentUnit === 'cm') {
+                unitDisplay.textContent = 'cm';
+                hint.textContent = '캘리브레이션 높이를 입력하세요 (예: 10cm)';
+                document.getElementById('calibrationHeight').step = '0.5';
+            } else {
+                unitDisplay.textContent = 'mm';
+                hint.textContent = '캘리브레이션 높이를 입력하세요 (예: 100mm)';
+                document.getElementById('calibrationHeight').step = '5';
+            }
+        }
+
+        requestSensorPermission() {
+            const sensorStatus = document.getElementById('sensorStatus');
+
+            if (typeof DeviceMotionEvent === 'undefined') {
+                sensorStatus.textContent = '✗ 이 기기는 모션 센서를 지원하지 않습니다';
+                sensorStatus.classList.remove('waiting', 'ok');
+                sensorStatus.classList.add('error');
+                return;
             }
 
-            updateCalibrationUnit() {
-                const unitDisplay = document.getElementById('calibrationUnitDisplay');
-                const hint = document.getElementById('calibrationHint');
+            const start = () => this.initSensors();
 
-                if (this.currentUnit === 'cm') {
-                    unitDisplay.textContent = 'cm';
-                    hint.textContent = '캘리브레이션 높이를 입력하세요 (예: 10cm)';
-                    document.getElementById('calibrationHeight').step = '0.5';
-                } else {
-                    unitDisplay.textContent = 'mm';
-                    hint.textContent = '캘리브레이션 높이를 입력하세요 (예: 100mm)';
-                    document.getElementById('calibrationHeight').step = '5';
-                }
-            }
+            if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                sensorStatus.textContent = '센서 권한을 요청 중입니다...';
+                sensorStatus.classList.remove('ok', 'error');
+                sensorStatus.classList.add('waiting');
 
-            requestSensorPermission() {
-                const sensorStatus = document.getElementById('sensorStatus');
-
-                if (typeof DeviceMotionEvent === 'undefined') {
-                    sensorStatus.textContent = '✗ 이 기기는 모션 센서를 지원하지 않습니다';
-                    sensorStatus.classList.remove('waiting', 'ok');
-                    sensorStatus.classList.add('error');
-                    return;
-                }
-
-                const start = () => this.initSensors();
-
-                if (typeof DeviceMotionEvent.requestPermission === 'function') {
-                    sensorStatus.textContent = '센서 권한을 요청 중입니다...';
-                    sensorStatus.classList.remove('ok', 'error');
-                    sensorStatus.classList.add('waiting');
-
-                    DeviceMotionEvent.requestPermission()
-                        .then(permission => {
-                            if (permission === 'granted') {
-                                start();
-                            } else {
-                                this.handlePermissionDenied();
-                            }
-                        })
-                        .catch(error => {
-                            console.error('권한 요청 오류:', error);
+                DeviceMotionEvent.requestPermission()
+                    .then(permission => {
+                        if (permission === 'granted') {
+                            start();
+                        } else {
                             this.handlePermissionDenied();
-                        });
-                } else {
-                    start();
-                }
-            }
-
-            initSensors() {
-                const sensorStatus = document.getElementById('sensorStatus');
-                let sensorDetected = false;
-
-                const handleMotion = (event) => {
-                    const a = event.acceleration;
-                    const ag = event.accelerationIncludingGravity;
-                    const rr = event.rotationRate;
-
-                    if (!ag ||
-                        !Number.isFinite(ag.x) ||
-                        !Number.isFinite(ag.y) ||
-                        !Number.isFinite(ag.z)) return;
-
-                    sensorDetected = true;
-                    this.sensorAvailable = true;
-
-                    this.accG = {
-                        x: ag.x || 0,
-                        y: ag.y || 0,
-                        z: ag.z || 0
-                    };
-
-                    if (a &&
-                        Number.isFinite(a.x) &&
-                        Number.isFinite(a.y) &&
-                        Number.isFinite(a.z)) {
-                        this.acc = {
-                            x: a.x || 0,
-                            y: a.y || 0,
-                            z: a.z || 0
-                        };
-                    } else {
-                        this.acc = {
-                            x: ag.x - this.gravity.x,
-                            y: ag.y - this.gravity.y,
-                            z: ag.z - this.gravity.z
-                        };
-                    }
-
-                    // 측정 전/정지 상태에서 아주 작은 센서 바이어스를 추정한다.
-                    // 이 바이어스를 제거하지 않으면 가만히 있어도 적분값이 계속 증가한다.
-                    const am = Math.sqrt(this.acc.x*this.acc.x + this.acc.y*this.acc.y + this.acc.z*this.acc.z);
-                    const rm = rr ? Math.sqrt(
-                        (rr.alpha || 0)**2 + (rr.beta || 0)**2 + (rr.gamma || 0)**2
-                    ) : 0;
-                    if (am < 0.12 && rm < 4) {
-                        this.stationarySamples.push({...this.acc});
-                        if (this.stationarySamples.length > 60) this.stationarySamples.shift();
-
-                        if (this.stationarySamples.length >= 20 && !this.isCalibratingNow && !this.isMeasuring) {
-                            const n = this.stationarySamples.length;
-                            this.accBias = this.stationarySamples.reduce((o,v)=>({
-                                x:o.x+v.x/n, y:o.y+v.y/n, z:o.z+v.z/n
-                            }), {x:0,y:0,z:0});
-                            this.biasReady = true;
                         }
-                    }
+                    })
+                    .catch(error => {
+                        console.error('권한 요청 오류:', error);
+                        this.handlePermissionDenied();
+                    });
+            } else {
+                start();
+            }
+        }
 
-                    if (this.biasReady) {
-                        this.acc.x -= this.accBias.x;
-                        this.acc.y -= this.accBias.y;
-                        this.acc.z -= this.accBias.z;
-                    }
+        initSensors() {
+            const sensorStatus = document.getElementById('sensorStatus');
+            let sensorDetected = false;
 
-                    if (rr) {
-                        this.rate = {
-                            x: (rr.alpha || 0) * Math.PI / 180,
-                            y: (rr.beta || 0) * Math.PI / 180,
-                            z: (rr.gamma || 0) * Math.PI / 180
-                        };
-                    }
+            const handleMotion = (event) => {
+                const a = event.acceleration;
+                const ag = event.accelerationIncludingGravity;
+                const rr = event.rotationRate;
 
-                    this.updateGravityEstimate(this.accG, event.timeStamp);
-                    this.updateOrientation(event.timeStamp);
-                    this.integrateVerticalMotion(event.timeStamp);
+                if (!ag ||
+                    !Number.isFinite(ag.x) ||
+                    !Number.isFinite(ag.y) ||
+                    !Number.isFinite(ag.z)) return;
 
-                    if (sensorStatus.classList.contains('waiting')) {
-                        sensorStatus.textContent = '✓ 센서 준비 완료';
-                        sensorStatus.classList.remove('error', 'waiting');
-                        sensorStatus.classList.add('ok');
-                        this.enableCalibration();
-                    }
+                sensorDetected = true;
+                this.sensorAvailable = true;
+
+                this.accG = {
+                    x: ag.x || 0,
+                    y: ag.y || 0,
+                    z: ag.z || 0
                 };
 
-                window.addEventListener('devicemotion', handleMotion, false);
-
-                setTimeout(() => {
-                    if (!sensorDetected) this.showSensorError();
-                }, 3000);
-            }
-
-            updateGravityEstimate(ag, timestamp) {
-                // A low-pass gravity estimate is used only to correct slow drift.
-                // During rapid movement the raw gravity direction is not allowed
-                // to dominate the estimate.
-                const gmag = Math.sqrt(ag.x * ag.x + ag.y * ag.y + ag.z * ag.z);
-                if (gmag < 7 || gmag > 12) return;
-
-                const alpha = this.gravityReady ? 0.985 : 0.75;
-
-                this.gravity.x = alpha * this.gravity.x + (1 - alpha) * ag.x;
-                this.gravity.y = alpha * this.gravity.y + (1 - alpha) * ag.y;
-                this.gravity.z = alpha * this.gravity.z + (1 - alpha) * ag.z;
-                this.gravityReady = true;
-            }
-
-            // Integrate gyro orientation, then softly correct the gravity direction.
-            // This lets the vertical axis follow the phone even when it is rotated
-            // from flat to upright during a measurement.
-            updateOrientation(timestamp) {
-                if (!this.lastOrientationTime) {
-                    this.lastOrientationTime = timestamp || performance.now();
-                    return;
+                if (a &&
+                    Number.isFinite(a.x) &&
+                    Number.isFinite(a.y) &&
+                    Number.isFinite(a.z)) {
+                    this.acc = {
+                        x: a.x || 0,
+                        y: a.y || 0,
+                        z: a.z || 0
+                    };
+                } else {
+                    this.acc = {
+                        x: ag.x - this.gravity.x,
+                        y: ag.y - this.gravity.y,
+                        z: ag.z - this.gravity.z
+                    };
                 }
 
-                let dt = ((timestamp || performance.now()) - this.lastOrientationTime) / 1000;
-                this.lastOrientationTime = timestamp || performance.now();
+                // 측정 전/정지 상태에서 아주 작은 센서 바이어스를 추정한다.
+                // 이 바이어스를 제거하지 않으면 가만히 있어도 적분값이 계속 증가한다.
+                const am = Math.sqrt(this.acc.x*this.acc.x + this.acc.y*this.acc.y + this.acc.z*this.acc.z);
+                const rm = rr ? Math.sqrt(
+                    (rr.alpha || 0)**2 + (rr.beta || 0)**2 + (rr.gamma || 0)**2
+                ) : 0;
+                if (am < 0.12 && rm < 4) {
+                    this.stationarySamples.push({...this.acc});
+                    if (this.stationarySamples.length > 60) this.stationarySamples.shift();
 
-                if (!Number.isFinite(dt) || dt <= 0 || dt > 0.08) return;
-
-                const wx = this.rate.x, wy = this.rate.y, wz = this.rate.z;
-                const q = this.q;
-
-                const half = 0.5 * dt;
-                const nw = q.w + (-q.x * wx - q.y * wy - q.z * wz) * half;
-                const nx = q.x + ( q.w * wx + q.y * wz - q.z * wy) * half;
-                const ny = q.y + ( q.w * wy - q.x * wz + q.z * wx) * half;
-                const nz = q.z + ( q.w * wz + q.x * wy - q.y * wx) * half;
-
-                const n = Math.sqrt(nw*nw + nx*nx + ny*ny + nz*nz) || 1;
-                q.w = nw / n;
-                q.x = nx / n;
-                q.y = ny / n;
-                q.z = nz / n;
-
-                if (this.gravityReady) {
-                    // Desired world-up expressed in device coordinates.
-                    const gm = Math.sqrt(
-                        this.gravity.x*this.gravity.x +
-                        this.gravity.y*this.gravity.y +
-                        this.gravity.z*this.gravity.z
-                    );
-
-                    if (gm > 7 && gm < 12) {
-                        const gx = -this.gravity.x / gm;
-                        const gy = -this.gravity.y / gm;
-                        const gz = -this.gravity.z / gm;
-
-                        // Device up vector from current quaternion.
-                        const ux = 2 * (q.x*q.z + q.w*q.y);
-                        const uy = 2 * (q.y*q.z - q.w*q.x);
-                        const uz = 1 - 2 * (q.x*q.x + q.y*q.y);
-
-                        // Small complementary correction.
-                        const ex = gy*uz - gz*uy;
-                        const ey = gz*ux - gx*uz;
-                        const ez = gx*uy - gy*ux;
-
-                        const k = 0.035;
-                        q.x += k * ex;
-                        q.y += k * ey;
-                        q.z += k * ez;
-
-                        const nn = Math.sqrt(q.w*q.w + q.x*q.x + q.y*q.y + q.z*q.z) || 1;
-                        q.w /= nn; q.x /= nn; q.y /= nn; q.z /= nn;
+                    if (this.stationarySamples.length >= 20 && !this.isCalibratingNow && !this.isMeasuring) {
+                        const n = this.stationarySamples.length;
+                        this.accBias = this.stationarySamples.reduce((o,v)=>({
+                            x:o.x+v.x/n, y:o.y+v.y/n, z:o.z+v.z/n
+                        }), {x:0,y:0,z:0});
+                        this.biasReady = true;
                     }
                 }
-            }
 
-            // Convert device acceleration to world coordinates and use only
-            // the world vertical component.
-            getWorldVerticalAcceleration() {
-                const x = this.acc.x, y = this.acc.y, z = this.acc.z;
-                const q = this.q;
-
-                // Rotate vector by quaternion q.
-                const tx = 2 * (q.y * z - q.z * y);
-                const ty = 2 * (q.z * x - q.x * z);
-                const tz = 2 * (q.x * y - q.y * x);
-
-                const wx = x + q.w * tx + (q.y * tz - q.z * ty);
-                const wy = y + q.w * ty + (q.z * tx - q.x * tz);
-                const wz = z + q.w * tz + (q.x * ty - q.y * tx);
-
-                // World Z is vertical in this application.
-                return wz;
-            }
-
-            integrateVerticalMotion(timestamp) {
-                if (!this.isCalibratingNow && !this.isMeasuring) return;
-
-                if (!this.lastTimestamp) {
-                    this.lastTimestamp = timestamp || performance.now();
-                    return;
+                if (this.biasReady) {
+                    this.acc.x -= this.accBias.x;
+                    this.acc.y -= this.accBias.y;
+                    this.acc.z -= this.accBias.z;
                 }
 
-                let dt = ((timestamp || performance.now()) - this.lastTimestamp) / 1000;
-                this.lastTimestamp = timestamp || performance.now();
+                if (rr) {
+                    this.rate = {
+                        x: (rr.alpha || 0) * Math.PI / 180,
+                        y: (rr.beta || 0) * Math.PI / 180,
+                        z: (rr.gamma || 0) * Math.PI / 180
+                    };
+                }
 
-                if (!Number.isFinite(dt) || dt <= 0 || dt > 0.05) return;
+                this.updateGravityEstimate(this.accG, event.timeStamp);
+                this.updateOrientation(event.timeStamp);
+                this.integrateVerticalMotion(event.timeStamp);
 
-                // 현재 기기 좌표에서 중력 방향을 이용해 '수직 가속도'만 추출한다.
-                // 방향을 바꿔도 수직축을 따라 계산되도록 한다.
+                if (sensorStatus.classList.contains('waiting')) {
+                    sensorStatus.textContent = '✓ 센서 준비 완료';
+                    sensorStatus.classList.remove('error', 'waiting');
+                    sensorStatus.classList.add('ok');
+                    this.enableCalibration();
+                }
+            };
+
+            window.addEventListener('devicemotion', handleMotion, false);
+
+            setTimeout(() => {
+                if (!sensorDetected) this.showSensorError();
+            }, 3000);
+        }
+
+        updateGravityEstimate(ag, timestamp) {
+            // A low-pass gravity estimate is used only to correct slow drift.
+            // During rapid movement the raw gravity direction is not allowed
+            // to dominate the estimate.
+            const gmag = Math.sqrt(ag.x * ag.x + ag.y * ag.y + ag.z * ag.z);
+            if (gmag < 7 || gmag > 12) return;
+
+            const alpha = this.gravityReady ? 0.985 : 0.75;
+
+            this.gravity.x = alpha * this.gravity.x + (1 - alpha) * ag.x;
+            this.gravity.y = alpha * this.gravity.y + (1 - alpha) * ag.y;
+            this.gravity.z = alpha * this.gravity.z + (1 - alpha) * ag.z;
+            this.gravityReady = true;
+        }
+
+        // Integrate gyro orientation, then softly correct the gravity direction.
+        // This lets the vertical axis follow the phone even when it is rotated
+        // from flat to upright during a measurement.
+        updateOrientation(timestamp) {
+            if (!this.lastOrientationTime) {
+                this.lastOrientationTime = timestamp || performance.now();
+                return;
+            }
+
+            let dt = ((timestamp || performance.now()) - this.lastOrientationTime) / 1000;
+            this.lastOrientationTime = timestamp || performance.now();
+
+            if (!Number.isFinite(dt) || dt <= 0 || dt > 0.08) return;
+
+            const wx = this.rate.x, wy = this.rate.y, wz = this.rate.z;
+            const q = this.q;
+
+            const half = 0.5 * dt;
+            const nw = q.w + (-q.x * wx - q.y * wy - q.z * wz) * half;
+            const nx = q.x + ( q.w * wx + q.y * wz - q.z * wy) * half;
+            const ny = q.y + ( q.w * wy - q.x * wz + q.z * wx) * half;
+            const nz = q.z + ( q.w * wz + q.x * wy - q.y * wx) * half;
+
+            const n = Math.sqrt(nw*nw + nx*nx + ny*ny + nz*nz) || 1;
+            q.w = nw / n;
+            q.x = nx / n;
+            q.y = ny / n;
+            q.z = nz / n;
+
+            if (this.gravityReady) {
+                // Desired world-up expressed in device coordinates.
                 const gm = Math.sqrt(
                     this.gravity.x*this.gravity.x +
                     this.gravity.y*this.gravity.y +
                     this.gravity.z*this.gravity.z
                 );
 
-                if (gm < 7 || gm > 12) return;
+                if (gm > 7 && gm < 12) {
+                    const gx = -this.gravity.x / gm;
+                    const gy = -this.gravity.y / gm;
+                    const gz = -this.gravity.z / gm;
 
-                const ux = this.gravity.x / gm;
-                const uy = this.gravity.y / gm;
-                const uz = this.gravity.z / gm;
+                    // Device up vector from current quaternion.
+                    const ux = 2 * (q.x*q.z + q.w*q.y);
+                    const uy = 2 * (q.y*q.z - q.w*q.x);
+                    const uz = 1 - 2 * (q.x*q.x + q.y*q.y);
 
-                // linear acceleration의 중력 방향 성분.
-                // 부호는 기기 좌표계에서 중력 방향을 기준으로 한다.
-                let az = this.acc.x*ux + this.acc.y*uy + this.acc.z*uz;
+                    // Small complementary correction.
+                    const ex = gy*uz - gz*uy;
+                    const ey = gz*ux - gx*uz;
+                    const ez = gx*uy - gy*ux;
 
-                // 작은 노이즈는 0으로 처리하되, 느린 움직임을 잡아낼 수 있도록
-                // 너무 높은 threshold는 사용하지 않는다.
-                if (Math.abs(az) < 0.045) az = 0;
+                    const k = 0.035;
+                    q.x += k * ex;
+                    q.y += k * ey;
+                    q.z += k * ez;
 
-                const gyroMagnitude = Math.sqrt(
-                    this.rate.x*this.rate.x +
-                    this.rate.y*this.rate.y +
-                    this.rate.z*this.rate.z
-                );
-
-                const accelMagnitude = Math.sqrt(
-                    this.acc.x*this.acc.x +
-                    this.acc.y*this.acc.y +
-                    this.acc.z*this.acc.z
-                );
-
-                const stationary =
-                    Math.abs(az) < 0.065 &&
-                    gyroMagnitude < 0.08 &&
-                    accelMagnitude < 0.16;
-
-                if (stationary) {
-                    this.stationaryTime += dt;
-
-                    // 정지한 뒤에는 속도뿐 아니라 위치 적분도 더 이상 진행하지 않는다.
-                    // 이것이 '가만히 들고 있어도 높이가 계속 올라가는 현상'을 막는다.
-                    if (this.stationaryTime > 0.16) {
-                        this.velocity = 0;
-                        az = 0;
-                    }
-                } else {
-                    this.stationaryTime = 0;
+                    const nn = Math.sqrt(q.w*q.w + q.x*q.x + q.y*q.y + q.z*q.z) || 1;
+                    q.w /= nn; q.x /= nn; q.y /= nn; q.z /= nn;
                 }
+            }
+        }
 
-                const previousVelocity = this.velocity;
+        // Convert device acceleration to world coordinates and use only
+        // the world vertical component.
+        getWorldVerticalAcceleration() {
+            const x = this.acc.x, y = this.acc.y, z = this.acc.z;
+            const q = this.q;
 
-                // 부호를 유지한다. abs()를 여기서 적용하면
-                // 올라갔다 내려올 때 모두 높이가 증가하는 문제가 생긴다.
-                this.velocity += az * dt;
+            // Rotate vector by quaternion q.
+            const tx = 2 * (q.y * z - q.z * y);
+            const ty = 2 * (q.z * x - q.x * z);
+            const tz = 2 * (q.x * y - q.y * x);
 
-                // 아주 작은 속도는 정지 상태로 수렴시키기
-                if (Math.abs(this.velocity) < 0.012 && Math.abs(az) < 0.08) {
+            const wx = x + q.w * tx + (q.y * tz - q.z * ty);
+            const wy = y + q.w * ty + (q.z * tx - q.x * tz);
+            const wz = z + q.w * tz + (q.x * ty - q.y * tx);
+
+            // World Z is vertical in this application.
+            return wz;
+        }
+
+        integrateVerticalMotion(timestamp) {
+            if (!this.isCalibratingNow && !this.isMeasuring) return;
+
+            if (!this.lastTimestamp) {
+                this.lastTimestamp = timestamp || performance.now();
+                return;
+            }
+
+            let dt = ((timestamp || performance.now()) - this.lastTimestamp) / 1000;
+            this.lastTimestamp = timestamp || performance.now();
+
+            if (!Number.isFinite(dt) || dt <= 0 || dt > 0.05) return;
+
+            // 현재 기기 좌표에서 중력 방향을 이용해 '수직 가속도'만 추출한다.
+            // 방향을 바꿔도 수직축을 따라 계산되도록 한다.
+            const gm = Math.sqrt(
+                this.gravity.x*this.gravity.x +
+                this.gravity.y*this.gravity.y +
+                this.gravity.z*this.gravity.z
+            );
+
+            if (gm < 7 || gm > 12) return;
+
+            const ux = this.gravity.x / gm;
+            const uy = this.gravity.y / gm;
+            const uz = this.gravity.z / gm;
+
+            // linear acceleration의 중력 방향 성분.
+            // 부호는 기기 좌표계에서 중력 방향을 기준으로 한다.
+            let az = this.acc.x*ux + this.acc.y*uy + this.acc.z*uz;
+
+            // 작은 노이즈는 0으로 처리하되, 느린 움직임을 잡아낼 수 있도록
+            // 너무 높은 threshold는 사용하지 않는다.
+            if (Math.abs(az) < 0.045) az = 0;
+
+            const gyroMagnitude = Math.sqrt(
+                this.rate.x*this.rate.x +
+                this.rate.y*this.rate.y +
+                this.rate.z*this.rate.z
+            );
+
+            const accelMagnitude = Math.sqrt(
+                this.acc.x*this.acc.x +
+                this.acc.y*this.acc.y +
+                this.acc.z*this.acc.z
+            );
+
+            const stationary =
+                Math.abs(az) < 0.065 &&
+                gyroMagnitude < 0.08 &&
+                accelMagnitude < 0.16;
+
+            if (stationary) {
+                this.stationaryTime += dt;
+
+                // 정지한 뒤에는 속도뿐 아니라 위치 적분도 더 이상 진행하지 않는다.
+                // 이것이 '가만히 들고 있어도 높이가 계속 올라가는 현상'을 막는다.
+                if (this.stationaryTime > 0.16) {
                     this.velocity = 0;
+                    az = 0;
                 }
-
-                // 비정상적인 한 번의 센서 spike 제한
-                this.velocity = Math.max(-3, Math.min(3, this.velocity));
-
-                this.signedPosition += (previousVelocity + this.velocity) * 0.5 * dt;
-
-                // ★ 핵심: 여기서는 반드시 signed 값을 유지한다.
-                // 올라가면 한 방향으로 증가하고, 내려오면 다시 감소한다.
-                const displacement = this.signedPosition - this.startPosition;
-
-                if (this.isCalibratingNow) {
-                    this.calibrationDisplacement = Math.abs(displacement);
-                    const estimatedHeight =
-                        this.calibrationDisplacement * this.calibrationFactor * 100;
-
-                    document.getElementById('calibYValue').textContent =
-                        displacement.toFixed(3);
-                    document.getElementById('calibHeightValue').textContent =
-                        estimatedHeight.toFixed(1);
-                }
-
-                if (this.isMeasuring) {
-                    this.measurementDisplacement = displacement;
-                    const estimatedHeight =
-                        Math.abs(displacement) * this.calibrationFactor * 100;
-
-                    this.recentHeightSamples.push(displacement);
-                    if (this.recentHeightSamples.length > this.maxSampleCount) {
-                        this.recentHeightSamples.shift();
-                    }
-
-                    document.getElementById('measYValue').textContent =
-                        displacement.toFixed(3);
-                    document.getElementById('measHeightValue').textContent =
-                        estimatedHeight.toFixed(1);
-                }
-            }
-
-            handlePermissionDenied() {
-                const sensorStatus = document.getElementById('sensorStatus');
-                sensorStatus.textContent = '✗ 센서 권한이 거부되었습니다';
-                sensorStatus.classList.remove('waiting', 'ok');
-                sensorStatus.classList.add('error');
-                this.showSensorError();
-            }
-
-            showSensorError() {
-                document.getElementById('sensorErrorModal').classList.add('show');
-            }
-
-            enableCalibration() {
-                document.getElementById('startCalibrationBtn').disabled = false;
-            }
-
-            resetMotionState() {
-                this.velocity = 0;
-                this.position = 0;
-                this.signedPosition = 0;
-                this.startPosition = 0;
-                this.lastTimestamp = 0;
-                this.lastOrientationTime = 0;
+            } else {
                 this.stationaryTime = 0;
-                this.recentHeightSamples = [];
-                this.stationaryTime = 0;
-                this.q = { w: 1, x: 0, y: 0, z: 0 };
             }
 
-            prepareReferencePoint() {
-                this.resetMotionState();
-                this.startPosition = 0;
-                this.signedPosition = 0;
+            const previousVelocity = this.velocity;
+
+            // 부호를 유지한다. abs()를 여기서 적용하면
+            // 올라갔다 내려올 때 모두 높이가 증가하는 문제가 생긴다.
+            this.velocity += az * dt;
+
+            // 아주 작은 속도는 정지 상태로 수렴시키기
+            if (Math.abs(this.velocity) < 0.012 && Math.abs(az) < 0.08) {
                 this.velocity = 0;
-                this.measurementDisplacement = 0;
             }
 
-            startCalibration() {
-                if (!this.sensorAvailable) {
-                    alert('센서가 준비되지 않았습니다. 다시 시도해주세요.');
-                    return;
+            // 비정상적인 한 번의 센서 spike 제한
+            this.velocity = Math.max(-3, Math.min(3, this.velocity));
+
+            this.signedPosition += (previousVelocity + this.velocity) * 0.5 * dt;
+
+            // ★ 핵심: 여기서는 반드시 signed 값을 유지한다.
+            // 올라가면 한 방향으로 증가하고, 내려오면 다시 감소한다.
+            const displacement = this.signedPosition - this.startPosition;
+
+            if (this.isCalibratingNow) {
+                this.calibrationDisplacement = Math.abs(displacement);
+                const estimatedHeight =
+                    this.calibrationDisplacement * this.calibrationFactor * 100;
+
+                document.getElementById('calibYValue').textContent =
+                    displacement.toFixed(3);
+                document.getElementById('calibHeightValue').textContent =
+                    estimatedHeight.toFixed(1);
+            }
+
+            if (this.isMeasuring) {
+                this.measurementDisplacement = displacement;
+                const estimatedHeight =
+                    Math.abs(displacement) * this.calibrationFactor * 100;
+
+                this.recentHeightSamples.push(displacement);
+                if (this.recentHeightSamples.length > this.maxSampleCount) {
+                    this.recentHeightSamples.shift();
                 }
 
-                this.prepareReferencePoint();
-                this.isCalibratingNow = true;
-                document.getElementById('calibrationInProgressModal').classList.add('show');
+                document.getElementById('measYValue').textContent =
+                    displacement.toFixed(3);
+                document.getElementById('measHeightValue').textContent =
+                    estimatedHeight.toFixed(1);
+            }
+        }
+
+        handlePermissionDenied() {
+            const sensorStatus = document.getElementById('sensorStatus');
+            sensorStatus.textContent = '✗ 센서 권한이 거부되었습니다';
+            sensorStatus.classList.remove('waiting', 'ok');
+            sensorStatus.classList.add('error');
+            this.showSensorError();
+        }
+
+        showSensorError() {
+            document.getElementById('sensorErrorModal').classList.add('show');
+        }
+
+        enableCalibration() {
+            document.getElementById('startCalibrationBtn').disabled = false;
+        }
+
+        resetMotionState() {
+            this.velocity = 0;
+            this.position = 0;
+            this.signedPosition = 0;
+            this.startPosition = 0;
+            this.lastTimestamp = 0;
+            this.lastOrientationTime = 0;
+            this.stationaryTime = 0;
+            this.recentHeightSamples = [];
+            this.stationaryTime = 0;
+            this.q = { w: 1, x: 0, y: 0, z: 0 };
+        }
+
+        prepareReferencePoint() {
+            this.resetMotionState();
+            this.startPosition = 0;
+            this.signedPosition = 0;
+            this.velocity = 0;
+            this.measurementDisplacement = 0;
+        }
+
+        startCalibration() {
+            if (!this.sensorAvailable) {
+                alert('센서가 준비되지 않았습니다. 다시 시도해주세요.');
+                return;
             }
 
-            completeCalibration() {
-                this.isCalibratingNow = false;
-                this.calibrationDisplacement = Math.abs(this.signedPosition - this.startPosition);
+            this.prepareReferencePoint();
+            this.isCalibratingNow = true;
+            document.getElementById('calibrationInProgressModal').classList.add('show');
+        }
 
-                document.getElementById('calibrationInProgressModal').classList.remove('show');
-                this.calculateCalibrationFactor();
+        completeCalibration() {
+            this.isCalibratingNow = false;
+            this.calibrationDisplacement = Math.abs(this.signedPosition - this.startPosition);
+
+            document.getElementById('calibrationInProgressModal').classList.remove('show');
+            this.calculateCalibrationFactor();
+        }
+
+        calculateCalibrationFactor() {
+            if (this.calibrationDisplacement > 0.01) {
+                this.calibrationFactor =
+                    this.calibrationHeight / (this.calibrationDisplacement * 100);
+
+                this.isCalibrated = true;
+                this.showSuccessAlert('캘리브레이션이 완료되었습니다!');
+
+                document.getElementById('calibrationSection').style.display = 'none';
+                document.getElementById('measurementSection').style.display = 'block';
+            } else {
+                alert('충분히 움직이지 않았습니다. 다시 시도해주세요.');
+            }
+        }
+
+        startMeasurement() {
+            if (!this.isCalibrated) {
+                alert('먼저 캘리브레이션을 완료하세요.');
+                return;
             }
 
-            calculateCalibrationFactor() {
-                if (this.calibrationDisplacement > 0.01) {
-                    this.calibrationFactor =
-                        this.calibrationHeight / (this.calibrationDisplacement * 100);
+            // 측정 시작점 = 0.
+            // 중간에 더 높이 올라갔다 내려와도 최종 위치만 사용한다.
+            this.prepareReferencePoint();
+            this.isMeasuring = true;
+            this.measurementDisplacement = 0;
+            this.measurementStartTime = Date.now();
 
-                    this.isCalibrated = true;
-                    this.showSuccessAlert('캘리브레이션이 완료되었습니다!');
+            document.getElementById('measurementInProgressModal').classList.add('show');
+            document.getElementById('toggleMeasurementBtn').textContent = '측정 중...';
+            document.getElementById('toggleMeasurementBtn').disabled = true;
+        }
 
-                    document.getElementById('calibrationSection').style.display = 'none';
-                    document.getElementById('measurementSection').style.display = 'block';
-                } else {
-                    alert('충분히 움직이지 않았습니다. 다시 시도해주세요.');
-                }
+        endMeasurement() {
+            // 완료 직전 최근 샘플의 중앙값을 사용한다.
+            const values = this.recentHeightSamples.length
+                ? [...this.recentHeightSamples]
+                : [Math.abs(this.position - this.startPosition)];
+
+            values.sort((a, b) => a - b);
+
+            const median = values[Math.floor(values.length / 2)];
+
+            this.isMeasuring = false;
+            // 최종 결과는 시작점 대비 종료점의 높이 차이.
+            // 중간 최고점은 결과에 누적하지 않는다.
+            this.measurementDisplacement = Math.abs(median);
+
+            document.getElementById('measurementInProgressModal').classList.remove('show');
+            document.getElementById('toggleMeasurementBtn').textContent = '측정 시작';
+            document.getElementById('toggleMeasurementBtn').disabled = false;
+
+            this.calculateHeight();
+        }
+
+        calculateHeight() {
+            if (this.measurementDisplacement < 0.005) {
+                alert('시작 위치와 완료 위치의 차이가 너무 작습니다.');
+                return;
             }
 
-            startMeasurement() {
-                if (!this.isCalibrated) {
-                    alert('먼저 캘리브레이션을 완료하세요.');
-                    return;
-                }
+            let heightCM =
+                this.measurementDisplacement * 100 * this.calibrationFactor;
 
-                // 측정 시작점 = 0.
-                // 중간에 더 높이 올라갔다 내려와도 최종 위치만 사용한다.
-                this.prepareReferencePoint();
-                this.isMeasuring = true;
-                this.measurementDisplacement = 0;
-                this.measurementStartTime = Date.now();
+            heightCM = Math.max(0.1, heightCM);
+            this.displayResult(heightCM);
+        }
 
-                document.getElementById('measurementInProgressModal').classList.add('show');
-                document.getElementById('toggleMeasurementBtn').textContent = '측정 중...';
-                document.getElementById('toggleMeasurementBtn').disabled = true;
+        displayResult(heightCM) {
+            let displayValue;
+
+            if (this.currentUnit === 'cm') {
+                displayValue = heightCM.toFixed(1);
+            } else {
+                displayValue = (heightCM * 10).toFixed(1);
             }
 
-            endMeasurement() {
-                // 완료 직전 최근 샘플의 중앙값을 사용한다.
-                const values = this.recentHeightSamples.length
-                    ? [...this.recentHeightSamples]
-                    : [Math.abs(this.position - this.startPosition)];
+            document.getElementById('resultValue').textContent =
+                `${displayValue} ${this.currentUnit}`;
+            document.getElementById('statusText').textContent =
+                '측정 완료! (센서 융합 / 시작점 ↔ 완료점)';
+        }
 
-                values.sort((a, b) => a - b);
+        updateDisplay() {
+            const resultValue = document.getElementById('resultValue').textContent;
 
-                const median = values[Math.floor(values.length / 2)];
+            if (resultValue !== '-' && resultValue !== '측정 중...') {
+                const parts = resultValue.split(' ');
+                const value = parseFloat(parts[0]);
 
-                this.isMeasuring = false;
-                // 최종 결과는 시작점 대비 종료점의 높이 차이.
-                // 중간 최고점은 결과에 누적하지 않는다.
-                this.measurementDisplacement = Math.abs(median);
-
-                document.getElementById('measurementInProgressModal').classList.remove('show');
-                document.getElementById('toggleMeasurementBtn').textContent = '측정 시작';
-                document.getElementById('toggleMeasurementBtn').disabled = false;
-
-                this.calculateHeight();
-            }
-
-            calculateHeight() {
-                if (this.measurementDisplacement < 0.005) {
-                    alert('시작 위치와 완료 위치의 차이가 너무 작습니다.');
-                    return;
-                }
-
-                let heightCM =
-                    this.measurementDisplacement * 100 * this.calibrationFactor;
-
-                heightCM = Math.max(0.1, heightCM);
-                this.displayResult(heightCM);
-            }
-
-            displayResult(heightCM) {
-                let displayValue;
-
-                if (this.currentUnit === 'cm') {
-                    displayValue = heightCM.toFixed(1);
-                } else {
-                    displayValue = (heightCM * 10).toFixed(1);
-                }
-
-                document.getElementById('resultValue').textContent =
-                    `${displayValue} ${this.currentUnit}`;
-                document.getElementById('statusText').textContent =
-                    '측정 완료! (센서 융합 / 시작점 ↔ 완료점)';
-            }
-
-            updateDisplay() {
-                const resultValue = document.getElementById('resultValue').textContent;
-
-                if (resultValue !== '-' && resultValue !== '측정 중...') {
-                    const parts = resultValue.split(' ');
-                    const value = parseFloat(parts[0]);
-
-                    if (!isNaN(value)) {
-                        if (this.currentUnit === 'cm') {
-                            document.getElementById('resultValue').textContent =
-                                `${value.toFixed(1)} cm`;
-                        } else {
-                            document.getElementById('resultValue').textContent =
-                                `${(value * 10).toFixed(1)} mm`;
-                        }
+                if (!isNaN(value)) {
+                    if (this.currentUnit === 'cm') {
+                        document.getElementById('resultValue').textContent =
+                            `${value.toFixed(1)} cm`;
+                    } else {
+                        document.getElementById('resultValue').textContent =
+                            `${(value * 10).toFixed(1)} mm`;
                     }
                 }
             }
-
-            reset() {
-                this.isMeasuring = false;
-                this.isCalibratingNow = false;
-                this.isCalibrated = false;
-                this.measurementDisplacement = 0;
-                this.resetMotionState();
-
-                document.getElementById('resultValue').textContent = '-';
-                document.getElementById('statusText').textContent = '준비됨';
-                document.getElementById('toggleMeasurementBtn').textContent = '측정 시작';
-                document.getElementById('toggleMeasurementBtn').disabled = false;
-                document.getElementById('calibrationSection').style.display = 'block';
-                document.getElementById('measurementSection').style.display = 'none';
-            }
-
-            showSuccessAlert(message) {
-                const alert = document.createElement('div');
-                alert.style.cssText = `
-                    position: fixed;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    background: white;
-                    padding: 30px;
-                    border-radius: 20px;
-                    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-                    z-index: 2000;
-                    text-align: center;
-                    max-width: 300px;
-                `;
-                alert.innerHTML = `
-                    <div style="font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #333;">✓ 성공</div>
-                    <div style="font-size: 14px; color: #666; margin-bottom: 20px;">${message}</div>
-                    <button class="btn btn-primary" onclick="this.parentElement.remove()" style="width: 100%;">확인</button>
-                `;
-                document.body.appendChild(alert);
-            }
         }
 
-        // 모달 함수
-        function closeCalibrationModal() {
-            document.getElementById('calibrationModal').classList.remove('show');
+        reset() {
+            this.isMeasuring = false;
+            this.isCalibratingNow = false;
+            this.isCalibrated = false;
+            this.measurementDisplacement = 0;
+            this.resetMotionState();
+
+            document.getElementById('resultValue').textContent = '-';
+            document.getElementById('statusText').textContent = '준비됨';
+            document.getElementById('toggleMeasurementBtn').textContent = '측정 시작';
+            document.getElementById('toggleMeasurementBtn').disabled = false;
+            document.getElementById('calibrationSection').style.display = 'block';
+            document.getElementById('measurementSection').style.display = 'none';
         }
 
-        function closeMeasurementModal() {
-            document.getElementById('measurementModal').classList.remove('show');
+        showSuccessAlert(message) {
+            const alert = document.createElement('div');
+            alert.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 30px;
+                border-radius: 20px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                z-index: 2000;
+                text-align: center;
+                max-width: 300px;
+            `;
+            alert.innerHTML = `
+                <div style="font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #333;">✓ 성공</div>
+                <div style="font-size: 14px; color: #666; margin-bottom: 20px;">${message}</div>
+                <button class="btn btn-primary" onclick="this.parentElement.remove()" style="width: 100%;">확인</button>
+            `;
+            document.body.appendChild(alert);
         }
+    }
 
-        // 앱 초기화
-        let app;
-        document.addEventListener('DOMContentLoaded', () => {
-            app = new HeightMeasurement();
-        });
-    </script>
+    // 모달 함수
+    function closeCalibrationModal() {
+        document.getElementById('calibrationModal').classList.remove('show');
+    }
+
+    function closeMeasurementModal() {
+        document.getElementById('measurementModal').classList.remove('show');
+    }
+
+    // 앱 초기화
+    let app;
+    document.addEventListener('DOMContentLoaded', () => {
+        app = new HeightMeasurement();
+    });
+</script>
+
 </body>
 </html>
