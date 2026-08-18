@@ -705,6 +705,12 @@
                 this.gravity = { x: 0, y: 0, z: 0 };
                 this.filteredAcceleration = { x: 0, y: 0, z: 0 };
                 this.lastTimestamp = 0;
+                this.verticalAcceleration = 0;
+                this.verticalVelocity = 0;
+                this.verticalPosition = 0;
+                this.startVerticalPosition = 0;
+                this.biasVertical = 0;
+                this.stationarySince = 0;
 
                 // 시작 자세에서 자동으로 결정되는 수직 방향
                 this.referenceUp = { x: 0, y: 1, z: 0 };
@@ -849,140 +855,131 @@
                 let sensorDetected = false;
 
                 const handleMotion = (event) => {
-                    const a = event.accelerationIncludingGravity;
-                    if (!a ||
-                        !Number.isFinite(a.x) ||
-                        !Number.isFinite(a.y) ||
-                        !Number.isFinite(a.z)) return;
+                    const linear = event.acceleration;
+                    const gravity = event.accelerationIncludingGravity;
+                    const hasLinear = linear && [linear.x,linear.y,linear.z].every(Number.isFinite);
+                    const hasGravity = gravity && [gravity.x,gravity.y,gravity.z].every(Number.isFinite);
+                    if (!hasLinear && !hasGravity) return;
 
                     sensorDetected = true;
                     this.sensorAvailable = true;
 
-                    // 저주파 성분을 중력으로 추정하여 제거한다.
-                    // 이렇게 하면 휴대폰을 수평으로 눕혔는지 세웠는지에 관계없이
-                    // 움직임 성분을 3축에서 얻을 수 있다.
-                    const alpha = 0.90;
-                    this.gravity.x = alpha * this.gravity.x + (1 - alpha) * a.x;
-                    this.gravity.y = alpha * this.gravity.y + (1 - alpha) * a.y;
-                    this.gravity.z = alpha * this.gravity.z + (1 - alpha) * a.z;
+                    // iOS가 제공하는 '중력 제거 가속도'를 우선 사용한다.
+                    // 기존 코드처럼 accelerationIncludingGravity에서 빠른
+                    // 저역통과 필터로 중력을 빼면 느린 움직임까지 사라질 수 있다.
+                    if (hasLinear) {
+                        this.accelerationX = linear.x || 0;
+                        this.accelerationY = linear.y || 0;
+                        this.accelerationZ = linear.z || 0;
+                    } else {
+                        // 구형/일부 환경의 fallback
+                        this.accelerationX = gravity.x || 0;
+                        this.accelerationY = gravity.y || 0;
+                        this.accelerationZ = gravity.z || 0;
+                    }
 
-                    this.accelerationX = a.x;
-                    this.accelerationY = a.y;
-                    this.accelerationZ = a.z;
-
-                    this.linearX = a.x - this.gravity.x;
-                    this.linearY = a.y - this.gravity.y;
-                    this.linearZ = a.z - this.gravity.z;
+                    // 현재 중력 방향으로부터 '위쪽' 방향을 계속 추정한다.
+                    // 휴대폰을 눕히거나 세워도 수직 이동을 같은 방식으로 계산한다.
+                    if (hasGravity) {
+                        const gx=gravity.x||0, gy=gravity.y||0, gz=gravity.z||0;
+                        const gm=Math.hypot(gx,gy,gz);
+                        if (gm>7 && gm<12) {
+                            const up={x:-gx/gm,y:-gy/gm,z:-gz/gm};
+                            const b=0.08;
+                            this.referenceUp.x=this.referenceUp.x*(1-b)+up.x*b;
+                            this.referenceUp.y=this.referenceUp.y*(1-b)+up.y*b;
+                            this.referenceUp.z=this.referenceUp.z*(1-b)+up.z*b;
+                            const n=Math.hypot(this.referenceUp.x,this.referenceUp.y,this.referenceUp.z);
+                            if(n){this.referenceUp.x/=n;this.referenceUp.y/=n;this.referenceUp.z/=n;}
+                        }
+                    }
 
                     if (sensorStatus.classList.contains('waiting')) {
-                        sensorStatus.textContent = '✓ 센서 준비 완료';
-                        sensorStatus.classList.remove('error', 'waiting');
+                        sensorStatus.textContent='✓ 센서 준비 완료';
+                        sensorStatus.classList.remove('error','waiting');
                         sensorStatus.classList.add('ok');
                         this.enableCalibration();
                     }
-
                     this.integrateMotion(event.timeStamp);
                 };
 
-                window.addEventListener('devicemotion', handleMotion, false);
-
-                setTimeout(() => {
-                    if (!sensorDetected) this.showSensorError();
-                }, 3000);
+                window.addEventListener('devicemotion',handleMotion,false);
+                setTimeout(()=>{if(!sensorDetected)this.showSensorError();},4000);
             }
 
             resetMotionState() {
-                this.velocity = { x: 0, y: 0, z: 0 };
-                this.position = { x: 0, y: 0, z: 0 };
-                this.filteredAcceleration = { x: 0, y: 0, z: 0 };
-                this.lastTimestamp = 0;
+                this.velocity={x:0,y:0,z:0};
+                this.position={x:0,y:0,z:0};
+                this.filteredAcceleration={x:0,y:0,z:0};
+                this.lastTimestamp=0;
+                this.verticalAcceleration=0;
+                this.verticalVelocity=0;
+                this.verticalPosition=0;
+                this.startVerticalPosition=0;
+                this.biasVertical=0;
+                this.stationarySince=0;
             }
 
             integrateMotion(timestamp) {
-                if (!this.isCalibratingNow && !this.isMeasuring) return;
+                if(!this.isCalibratingNow && !this.isMeasuring)return;
+                const now=timestamp||performance.now();
+                if(!this.lastTimestamp){this.lastTimestamp=now;return;}
+                const dt=(now-this.lastTimestamp)/1000;
+                this.lastTimestamp=now;
+                if(!Number.isFinite(dt)||dt<=0||dt>0.04)return;
 
-                if (!this.lastTimestamp) {
-                    this.lastTimestamp = timestamp || performance.now();
-                    return;
+                // 현재 가속도를 수직축으로 투영한다.
+                const raw=this.accelerationX*this.referenceUp.x+
+                          this.accelerationY*this.referenceUp.y+
+                          this.accelerationZ*this.referenceUp.z;
+
+                // 노이즈만 부드럽게 하고 느린 실제 움직임은 보존한다.
+                const s=0.35;
+                this.verticalAcceleration=this.verticalAcceleration*(1-s)+raw*s;
+
+                const absA=Math.abs(this.verticalAcceleration);
+                const likelyStill=absA<0.10;
+                if(likelyStill){
+                    if(!this.stationarySince)this.stationarySince=now;
+                }else{
+                    this.stationarySince=0;
                 }
 
-                let dt = ((timestamp || performance.now()) - this.lastTimestamp) / 1000;
-                this.lastTimestamp = timestamp || performance.now();
-
-                // Safari/센서 지연으로 생기는 비정상적인 큰 시간 간격 제거
-                if (!Number.isFinite(dt) || dt <= 0 || dt > 0.05) return;
-
-                // 3축 저역통과 필터 + 작은 진동/센서 노이즈 제거
-                const beta = 0.25;
-                this.filteredAcceleration.x =
-                    this.filteredAcceleration.x * (1 - beta) + this.linearX * beta;
-                this.filteredAcceleration.y =
-                    this.filteredAcceleration.y * (1 - beta) + this.linearY * beta;
-                this.filteredAcceleration.z =
-                    this.filteredAcceleration.z * (1 - beta) + this.linearZ * beta;
-
-                const ax = this.filteredAcceleration.x;
-                const ay = this.filteredAcceleration.y;
-                const az = this.filteredAcceleration.z;
-
-                // 정지에 가까운 구간에서는 속도를 0으로 보정하여
-                // 적분 드리프트를 크게 줄인다.
-                const magnitude = Math.sqrt(ax * ax + ay * ay + az * az);
-                const stationary = magnitude < 0.18;
-
-                if (stationary) {
-                    this.velocity.x *= 0.65;
-                    this.velocity.y *= 0.65;
-                    this.velocity.z *= 0.65;
-
-                    if (Math.abs(this.velocity.x) < 0.01) this.velocity.x = 0;
-                    if (Math.abs(this.velocity.y) < 0.01) this.velocity.y = 0;
-                    if (Math.abs(this.velocity.z) < 0.01) this.velocity.z = 0;
-                } else {
-                    this.velocity.x += ax * dt;
-                    this.velocity.y += ay * dt;
-                    this.velocity.z += az * dt;
-
-                    this.position.x += this.velocity.x * dt;
-                    this.position.y += this.velocity.y * dt;
-                    this.position.z += this.velocity.z * dt;
+                // 실제로 정지한 뒤에만 속도를 0으로 보정한다(ZUPT).
+                // 느리게 움직이는 중에는 속도를 강제로 0으로 만들지 않는다.
+                if(likelyStill && this.stationarySince && now-this.stationarySince>300){
+                    this.verticalVelocity*=0.18;
+                    if(Math.abs(this.verticalVelocity)<0.015)this.verticalVelocity=0;
                 }
 
-                // 위치 변화의 3차원 크기.
-                // 방향이 바뀌어도 특정 X/Y/Z 축에 의존하지 않는다.
-                const dx = this.position.x - this.startPosition.x;
-                const dy = this.position.y - this.startPosition.y;
-                const dz = this.position.z - this.startPosition.z;
-
-                // 시작 자세에서 정한 수직 방향의 이동량만 계산한다.
-                // 따라서 옆으로 흔들거나 휴대폰 방향을 바꾸는 영향을 줄인다.
-                const verticalDisplacement =
-                    dx * this.referenceUp.x +
-                    dy * this.referenceUp.y +
-                    dz * this.referenceUp.z;
-
-                const displacement = Math.abs(verticalDisplacement);
-
-                if (this.isCalibratingNow) {
-                    this.calibrationDisplacement = displacement;
-                    const estimatedHeight = displacement * this.calibrationFactor * 100;
-                    document.getElementById('calibYValue').textContent =
-                        displacement.toFixed(3);
-                    document.getElementById('calibHeightValue').textContent =
-                        estimatedHeight.toFixed(1);
+                // 정지 상태가 0.7초 이상 지속될 때만 센서 bias를 학습한다.
+                if(likelyStill && this.stationarySince && now-this.stationarySince>700){
+                    this.biasVertical=this.biasVertical*0.985+this.verticalAcceleration*0.015;
                 }
 
-                if (this.isMeasuring) {
+                const corrected=this.verticalAcceleration-this.biasVertical;
+                this.verticalVelocity+=corrected*dt;
+                this.verticalPosition+=this.verticalVelocity*dt;
+
+                if(likelyStill && now-this.stationarySince>400 && Math.abs(this.verticalVelocity)<0.04){
+                    this.verticalVelocity=0;
+                }
+
+                const displacement=Math.abs(this.verticalPosition-this.startVerticalPosition);
+
+                if(this.isCalibratingNow){
+                    this.calibrationDisplacement=displacement;
+                    const h=displacement*this.calibrationFactor*100;
+                    document.getElementById('calibYValue').textContent=displacement.toFixed(3);
+                    document.getElementById('calibHeightValue').textContent=h.toFixed(1);
+                }
+                if(this.isMeasuring){
                     this.recentHeightSamples.push(displacement);
-                    if (this.recentHeightSamples.length > this.maxSampleCount) {
-                        this.recentHeightSamples.shift();
-                    }
-                    this.measurementDisplacement = displacement;
-                    const estimatedHeight = displacement * this.calibrationFactor * 100;
-                    document.getElementById('measYValue').textContent =
-                        displacement.toFixed(3);
-                    document.getElementById('measHeightValue').textContent =
-                        estimatedHeight.toFixed(1);
+                    if(this.recentHeightSamples.length>this.maxSampleCount)this.recentHeightSamples.shift();
+                    this.measurementDisplacement=displacement;
+                    const h=displacement*this.calibrationFactor*100;
+                    document.getElementById('measYValue').textContent=displacement.toFixed(3);
+                    document.getElementById('measHeightValue').textContent=h.toFixed(1);
                 }
             }
 
@@ -1004,32 +1001,19 @@
 
             prepareReferencePoint() {
                 this.resetMotionState();
-
-                // 시작 직전의 위치를 0점으로 잡는다.
-                this.startPosition = { x: 0, y: 0, z: 0 };
-
-                // 현재 중력의 반대 방향을 '위쪽'으로 정의한다.
-                const gx = this.gravity.x;
-                const gy = this.gravity.y;
-                const gz = this.gravity.z;
-                const gm = Math.sqrt(gx * gx + gy * gy + gz * gz);
-
-                if (gm > 7 && gm < 12) {
-                    this.gravityMagnitude = gm;
-                    this.referenceUp = {
-                        x: -gx / gm,
-                        y: -gy / gm,
-                        z: -gz / gm
-                    };
+                const gx=this.gravity.x,gy=this.gravity.y,gz=this.gravity.z;
+                const gm=Math.hypot(gx,gy,gz);
+                if(gm>7&&gm<12){
+                    this.referenceUp={x:-gx/gm,y:-gy/gm,z:-gz/gm};
                 }
-
-                this.recentHeightSamples = [];
-
-                // 센서가 안정될 수 있도록 기준점을 몇 샘플 동안 유지하는 대신
-                // 현재의 위치/속도 상태를 0으로 강제한다.
-                this.velocity = { x: 0, y: 0, z: 0 };
-                this.position = { x: 0, y: 0, z: 0 };
-                this.lastTimestamp = 0;
+                this.startPosition={x:0,y:0,z:0};
+                this.startVerticalPosition=0;
+                this.verticalPosition=0;
+                this.verticalVelocity=0;
+                this.verticalAcceleration=0;
+                this.biasVertical=0;
+                this.recentHeightSamples=[];
+                this.lastTimestamp=0;
             }
 
             startCalibration() {
@@ -1046,7 +1030,7 @@
 
             completeCalibration() {
                 this.isCalibratingNow = false;
-                this.calibrationDisplacement = Math.abs(this.measureCurrentDisplacement());
+                this.calibrationDisplacement = this.getStableFinalDisplacement();
 
                 document.getElementById('calibrationInProgressModal').classList.remove('show');
 
@@ -1054,34 +1038,16 @@
             }
 
             measureCurrentDisplacement() {
-                const dx = this.position.x - this.startPosition.x;
-                const dy = this.position.y - this.startPosition.y;
-                const dz = this.position.z - this.startPosition.z;
-
-                return Math.abs(
-                    dx * this.referenceUp.x +
-                    dy * this.referenceUp.y +
-                    dz * this.referenceUp.z
-                );
+                return Math.abs(this.verticalPosition-this.startVerticalPosition);
             }
 
             getStableFinalDisplacement() {
-                const current = this.measureCurrentDisplacement();
+                const current=this.measureCurrentDisplacement();
                 this.recentHeightSamples.push(current);
-
-                if (this.recentHeightSamples.length > this.maxSampleCount) {
-                    this.recentHeightSamples.shift();
-                }
-
-                if (this.recentHeightSamples.length < 3) {
-                    return current;
-                }
-
-                const sorted = [...this.recentHeightSamples].sort((a, b) => a - b);
-                const trim = Math.floor(sorted.length * 0.2);
-                const stable = sorted.slice(trim, sorted.length - trim);
-
-                return stable.reduce((sum, v) => sum + v, 0) / stable.length;
+                if(this.recentHeightSamples.length>this.maxSampleCount)this.recentHeightSamples.shift();
+                if(this.recentHeightSamples.length<5)return current;
+                const a=[...this.recentHeightSamples].sort((x,y)=>x-y);
+                return a[Math.floor(a.length/2)];
             }
 
             calculateCalibrationFactor() {
