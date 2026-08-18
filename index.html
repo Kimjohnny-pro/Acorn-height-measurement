@@ -415,8 +415,16 @@
             }
         }
     </style>
+
+<style id="permissionGateStyle">
+#permissionGuideModal { z-index: 99999; }
+#permissionGuideModal .modal { text-align: center; }
+body.permission-gated > *:not(#permissionGuideModal) { visibility: hidden !important; }
+body.permission-gated #permissionGuideModal { visibility: visible !important; }
+</style>
+
 </head>
-<body>
+<body class="permission-gated">
     <div class="container">
         <h1>📏 높이 측정기</h1>
         <p class="subtitle">센서 기반 정밀 높이 측정</p>
@@ -474,18 +482,14 @@
     </div>
 
     <!-- 권한 안내 모달 (최초 실행) -->
-    <div class="modal show" id="permissionGuideModal">
-        <div class="modal-content">
-            <div class="modal-title">⚙️ 권한 설정 필요</div>
-            <div class="modal-text">
-                <p style="margin-bottom: 15px;">이 앱을 사용하려면 다음 권한을 허용해야 합니다:</p>
-                
-                <div class="step-guide">
-                    <div class="step-item">
-                        <strong>✓ 모션 & 피트니스 권한</strong>
-                        앱이 핸드폰의 기울기와 움직임을 감지하여 정확한 높이를 측정합니다.
-                    </div>
-                </div>
+    <div id="permissionGuideModal" class="modal-overlay show">
+            <div class="modal">
+                <h2>📱 모션 및 피트니스 권한 필요</h2>
+                <p>아래의 <strong>확인</strong> 버튼을 누르면 모션 및 피트니스 권한을 허용하거나 차단하는 화면이 뜹니다.</p>
+                <p>거기서 <strong>「허용」</strong>을 눌러야 프로그램이 실행됩니다.</p>
+                <button id="permissionConfirmBtn" class="btn btn-primary">확인</button>
+            </div>
+        </div>
 
                 <p style="font-weight: 600; color: #333; margin: 20px 0;">📱 권한 설정 방법:</p>
                 
@@ -695,6 +699,10 @@
                 // Gravity estimate in device coordinates
                 this.gravity = { x: 0, y: 0, z: 0 };
                 this.gravityReady = false;
+                this.accBias = { x: 0, y: 0, z: 0 };
+                this.biasReady = false;
+                this.stationarySamples = [];
+                this.signedPosition = 0;
 
                 // Quaternion: device -> world
                 this.q = { w: 1, x: 0, y: 0, z: 0 };
@@ -726,6 +734,7 @@
 
             setupPermissionConfirm() {
                 document.getElementById('permissionConfirmBtn').addEventListener('click', () => {
+                    document.body.classList.remove('permission-gated');
                     document.getElementById('permissionGuideModal').classList.remove('show');
                     this.requestSensorPermission();
                 });
@@ -879,6 +888,31 @@
                         };
                     }
 
+                    // 측정 전/정지 상태에서 아주 작은 센서 바이어스를 추정한다.
+                    // 이 바이어스를 제거하지 않으면 가만히 있어도 적분값이 계속 증가한다.
+                    const am = Math.sqrt(this.acc.x*this.acc.x + this.acc.y*this.acc.y + this.acc.z*this.acc.z);
+                    const rm = rr ? Math.sqrt(
+                        (rr.alpha || 0)**2 + (rr.beta || 0)**2 + (rr.gamma || 0)**2
+                    ) : 0;
+                    if (am < 0.12 && rm < 4) {
+                        this.stationarySamples.push({...this.acc});
+                        if (this.stationarySamples.length > 60) this.stationarySamples.shift();
+
+                        if (this.stationarySamples.length >= 20 && !this.isCalibratingNow && !this.isMeasuring) {
+                            const n = this.stationarySamples.length;
+                            this.accBias = this.stationarySamples.reduce((o,v)=>({
+                                x:o.x+v.x/n, y:o.y+v.y/n, z:o.z+v.z/n
+                            }), {x:0,y:0,z:0});
+                            this.biasReady = true;
+                        }
+                    }
+
+                    if (this.biasReady) {
+                        this.acc.x -= this.accBias.x;
+                        this.acc.y -= this.accBias.y;
+                        this.acc.z -= this.accBias.z;
+                    }
+
                     if (rr) {
                         this.rate = {
                             x: (rr.alpha || 0) * Math.PI / 180,
@@ -1008,23 +1042,36 @@
 
                 if (!this.lastTimestamp) {
                     this.lastTimestamp = timestamp || performance.now();
-                    this.lastMovingTime = this.lastTimestamp;
                     return;
                 }
 
                 let dt = ((timestamp || performance.now()) - this.lastTimestamp) / 1000;
                 this.lastTimestamp = timestamp || performance.now();
 
-                if (!Number.isFinite(dt) || dt <= 0 || dt > 0.06) return;
+                if (!Number.isFinite(dt) || dt <= 0 || dt > 0.05) return;
 
-                let az = this.getWorldVerticalAcceleration();
+                // 현재 기기 좌표에서 중력 방향을 이용해 '수직 가속도'만 추출한다.
+                // 방향을 바꿔도 수직축을 따라 계산되도록 한다.
+                const gm = Math.sqrt(
+                    this.gravity.x*this.gravity.x +
+                    this.gravity.y*this.gravity.y +
+                    this.gravity.z*this.gravity.z
+                );
 
-                // Small noise deadband. The threshold is deliberately low enough
-                // to retain slow movement.
-                if (Math.abs(az) < 0.055) az = 0;
+                if (gm < 7 || gm > 12) return;
 
-                // Adaptive damping: do not erase slow motion, but remove velocity
-                // when the phone is genuinely stationary.
+                const ux = this.gravity.x / gm;
+                const uy = this.gravity.y / gm;
+                const uz = this.gravity.z / gm;
+
+                // linear acceleration의 중력 방향 성분.
+                // 부호는 기기 좌표계에서 중력 방향을 기준으로 한다.
+                let az = this.acc.x*ux + this.acc.y*uy + this.acc.z*uz;
+
+                // 작은 노이즈는 0으로 처리하되, 느린 움직임을 잡아낼 수 있도록
+                // 너무 높은 threshold는 사용하지 않는다.
+                if (Math.abs(az) < 0.045) az = 0;
+
                 const gyroMagnitude = Math.sqrt(
                     this.rate.x*this.rate.x +
                     this.rate.y*this.rate.y +
@@ -1037,55 +1084,90 @@
                     this.acc.z*this.acc.z
                 );
 
-                const isStationary =
-                    Math.abs(az) < 0.075 &&
-                    gyroMagnitude < 0.055 &&
-                    accelMagnitude < 0.18;
+                const stationary =
+                    Math.abs(az) < 0.065 &&
+                    gyroMagnitude < 0.08 &&
+                    accelMagnitude < 0.16;
 
-                if (isStationary) {
+                if (stationary) {
                     this.stationaryTime += dt;
 
-                    if (this.stationaryTime > 0.18) {
-                        // ZUPT: zero velocity only after a real stationary interval.
+                    // 정지한 뒤에는 속도뿐 아니라 위치 적분도 더 이상 진행하지 않는다.
+                    // 이것이 '가만히 들고 있어도 높이가 계속 올라가는 현상'을 막는다.
+                    if (this.stationaryTime > 0.16) {
                         this.velocity = 0;
+                        az = 0;
                     }
                 } else {
                     this.stationaryTime = 0;
-                    this.lastMovingTime = timestamp || performance.now();
                 }
 
-                // Trapezoidal integration is more stable than simple Euler
-                // integration for slow, smooth movement.
                 const previousVelocity = this.velocity;
+
+                // 부호를 유지한다. abs()를 여기서 적용하면
+                // 올라갔다 내려올 때 모두 높이가 증가하는 문제가 생긴다.
                 this.velocity += az * dt;
 
-                // Soft velocity limiting prevents a single sensor spike from
-                // creating a huge position jump.
-                if (this.velocity > 4) this.velocity = 4;
-                if (this.velocity < -4) this.velocity = -4;
+                // 아주 작은 속도는 정지 상태로 수렴시키기
+                if (Math.abs(this.velocity) < 0.012 && Math.abs(az) < 0.08) {
+                    this.velocity = 0;
+                }
 
-                this.position += (previousVelocity + this.velocity) * 0.5 * dt;
+                // 비정상적인 한 번의 센서 spike 제한
+                this.velocity = Math.max(-3, Math.min(3, this.velocity));
 
-                const displacement = Math.abs(this.position - this.startPosition);
+                this.signedPosition += (previousVelocity + this.velocity) * 0.5 * dt;
+
+                // ★ 핵심: 여기서는 반드시 signed 값을 유지한다.
+                // 올라가면 한 방향으로 증가하고, 내려오면 다시 감소한다.
+                const displacement = this.signedPosition - this.startPosition;
 
                 if (this.isCalibratingNow) {
-                    this.calibrationDisplacement = displacement;
-                    const estimatedHeight = displacement * this.calibrationFactor * 100;
-                    document.getElementById('calibYValue').textContent = displacement.toFixed(3);
-                    document.getElementById('calibHeightValue').textContent = estimatedHeight.toFixed(1);
+                    this.calibrationDisplacement = Math.abs(displacement);
+                    const estimatedHeight =
+                        this.calibrationDisplacement * this.calibrationFactor * 100;
+
+                    document.getElementById('calibYValue').textContent =
+                        displacement.toFixed(3);
+                    document.getElementById('calibHeightValue').textContent =
+                        estimatedHeight.toFixed(1);
                 }
 
                 if (this.isMeasuring) {
+                    this.measurementDisplacement = displacement;
+                    const estimatedHeight =
+                        Math.abs(displacement) * this.calibrationFactor * 100;
+
                     this.recentHeightSamples.push(displacement);
                     if (this.recentHeightSamples.length > this.maxSampleCount) {
                         this.recentHeightSamples.shift();
                     }
 
-                    this.measurementDisplacement = displacement;
-                    const estimatedHeight = displacement * this.calibrationFactor * 100;
-                    document.getElementById('measYValue').textContent = displacement.toFixed(3);
-                    document.getElementById('measHeightValue').textContent = estimatedHeight.toFixed(1);
+                    document.getElementById('measYValue').textContent =
+                        displacement.toFixed(3);
+                    document.getElementById('measHeightValue').textContent =
+                        estimatedHeight.toFixed(1);
                 }
+            }
+
+            getStableDisplacement(value) {
+                this.recentHeightSamples.push(value);
+
+                if (this.recentHeightSamples.length > this.maxSampleCount) {
+                    this.recentHeightSamples.shift();
+                }
+
+                if (this.recentHeightSamples.length < 5) {
+                    return value;
+                }
+
+                // 최근 값 중 가장 작은/큰 일부를 버리고 평균을 내어
+                // 손떨림에 의한 순간적인 튐을 줄인다.
+                const sorted = [...this.recentHeightSamples].sort((a, b) => a - b);
+                const trim = Math.max(1, Math.floor(sorted.length * 0.2));
+                const stable = sorted.slice(trim, sorted.length - trim);
+
+                return stable.reduce((sum, v) => sum + v, 0) / stable.length;
             }
 
             handlePermissionDenied() {
@@ -1107,17 +1189,21 @@
             resetMotionState() {
                 this.velocity = 0;
                 this.position = 0;
+                this.signedPosition = 0;
                 this.startPosition = 0;
                 this.lastTimestamp = 0;
                 this.lastOrientationTime = 0;
                 this.stationaryTime = 0;
                 this.recentHeightSamples = [];
+                this.stationaryTime = 0;
                 this.q = { w: 1, x: 0, y: 0, z: 0 };
             }
 
             prepareReferencePoint() {
                 this.resetMotionState();
                 this.startPosition = 0;
+                this.signedPosition = 0;
+                this.velocity = 0;
                 this.measurementDisplacement = 0;
             }
 
@@ -1134,7 +1220,7 @@
 
             completeCalibration() {
                 this.isCalibratingNow = false;
-                this.calibrationDisplacement = Math.abs(this.position - this.startPosition);
+                this.calibrationDisplacement = Math.abs(this.signedPosition - this.startPosition);
 
                 document.getElementById('calibrationInProgressModal').classList.remove('show');
                 this.calculateCalibrationFactor();
@@ -1184,7 +1270,9 @@
                 const median = values[Math.floor(values.length / 2)];
 
                 this.isMeasuring = false;
-                this.measurementDisplacement = median;
+                // 최종 결과는 시작점 대비 종료점의 높이 차이.
+                // 중간 최고점은 결과에 누적하지 않는다.
+                this.measurementDisplacement = Math.abs(median);
 
                 document.getElementById('measurementInProgressModal').classList.remove('show');
                 document.getElementById('toggleMeasurementBtn').textContent = '측정 시작';
